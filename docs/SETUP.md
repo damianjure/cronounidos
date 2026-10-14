@@ -34,7 +34,7 @@ Nunca poner secret/service-role keys en `NEXT_PUBLIC_*`, GitHub, logs o formular
 ## 2. Supabase independiente
 
 1. Crear un proyecto nuevo llamado `cronounidos` en la organización elegida por el usuario. **Pendiente de elección/confirmación de project ref**.
-2. Revisar las dos migraciones en `supabase/migrations/` y probarlas localmente.
+2. Revisar las tres migraciones en `supabase/migrations/` y probarlas localmente.
 3. Confirmar el project ref de destino antes de vincular o aplicar a remoto. No se ejecutó SQL remoto en esta entrega.
 4. Aplicar migraciones usando la CLI a ese proyecto confirmado; exponer solo `public` en Data API. `private` **no** debe estar expuesto. Las tablas tienen GRANT explícitos y RLS activo.
 5. Ejecutar los advisors de Supabase y una prueba de API con identidades reales de prueba, incluyendo `anon`, pendientes y miembros de dos organizaciones.

@@ -16,7 +16,7 @@ Se leyó `AGENTS.md` y toda la documentación aprobada antes de implementar. El 
 
 ### Sprint 1
 
-- Dos migraciones, 29 tablas de dominio con RLS y GRANT explícitos, UUIDs/org_id y claves foráneas compuestas para impedir cruces de organización.
+- Tres migraciones, 29 tablas de dominio con RLS y GRANT explícitos, UUIDs/org_id y claves foráneas compuestas para impedir cruces de organización.
 - Organización, personas, usuarios/perfiles, membresías, equipos, roles, grants por acción/equipo; bibliotecas y vínculos normalizados de canciones, anuncios, mensajes y recursos.
 - Reuniones/revisiones, bloques, subactividades, puestos, asignaciones e historial append-only. Nota/campos privados en `block_details`, separados de columnas de horario.
 - Snapshot de horario y zona en la revisión; schema/version de tipo de bloque copiado a cada instancia. Cambiar un tipo no cambia las instancias existentes.
@@ -32,7 +32,7 @@ Se leyó `AGENTS.md` y toda la documentación aprobada antes de implementar. El 
 | --- | --- |
 | Lint | Pasó, sin errores ni warnings de código fuente |
 | Typecheck | Pasó con TypeScript strict |
-| Unit + Auth mockeado + SQL/RLS + PWA worker | 90 pruebas, 4 suites; pasando |
+| Unit + Auth mockeado + SQL/RLS + PWA worker | 92 pruebas, 4 suites; pasando |
 | Cobertura de cinco módulos críticos (dominio, env, validaciones, autorización, acciones Auth) | 100% líneas/statements/funciones; 95.61% ramas; umbral 80% |
 | Build de producción | Pasó usando `NEXT_BUILD_DIR` aislado por restricciones de limpieza del host |
 | HTTP smoke de 8 rutas/manifiesto/ícono/worker | Respuestas 200 del servidor de producción local; no sustituye comprobación visual |
@@ -54,6 +54,7 @@ La ejecución estándar de coverage en carpeta workspace generó métricas pero 
 - Integrante lee revisión publicada, no borrador ni notas; planificador ve draft según grant.
 - Confirmación propia, terceros denegados, rechazo conservado y audit append-only.
 - Publicación optimista rechaza versión stale; no se puede saltar el lock con UPDATE directo de published_at o puntero; borrador separado y publicado inmutable.
+- Subactividades de otro equipo no heredan permiso privado del bloque padre; acceso al equipo específico sin filtrar notas del padre.
 - Vinculación de personas solo admin y dentro de org; suspensión revoca privilegios inmediatamente; zonas IANA válidas y snapshot de tipos.
 - Errores de Auth/schema fallan cerrado; no uso de getSession ni user_metadata para autorización.
 - Worker no cachea API/POST/datos de sesión; offline mínimo público y purga logout.

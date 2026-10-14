@@ -42,11 +42,12 @@ insert into public.people(id,org_id,first_name,last_name) values('${person}','${
 update public.profiles set person_id='${person}',org_id='${org}' where user_id='${uid(4)}';
 insert into public.team_memberships(org_id,team_id,person_id) values('${org}','${team}','${person}');
 insert into public.roles(id,org_id,team_id,name) values('${uid(901)}','${org}','${team}','Streaming');
-insert into public.permission_grants(org_id,subject_user_id,permission,team_id) values ('${org}','${uid(1)}','administer',null),('${org}','${uid(3)}','plan',null),('${org}','${uid(3)}','read_content',null),('${org}','${uid(4)}','read_agenda',null),('${org}','${uid(5)}','read_agenda',null),('${org}','${uid(5)}','assign','${team}'),('${org}','${uid(5)}','confirm','${team}'),('${org}','${uid(5)}','read_people','${team}'),('${org}','${uid(5)}','read_content','${team}'),('${org}','${uid(6)}','read_agenda',null),('${otherOrg}','${uid(7)}','administer',null);
+insert into public.permission_grants(org_id,subject_user_id,permission,team_id) values ('${org}','${uid(1)}','administer',null),('${org}','${uid(3)}','plan',null),('${org}','${uid(3)}','read_content',null),('${org}','${uid(4)}','read_agenda',null),('${org}','${uid(5)}','read_agenda',null),('${org}','${uid(5)}','assign','${team}'),('${org}','${uid(5)}','confirm','${team}'),('${org}','${uid(5)}','read_people','${team}'),('${org}','${uid(5)}','read_content','${team}'),('${org}','${uid(6)}','read_agenda',null),('${org}','${uid(6)}','read_content','${otherTeam}'),('${otherOrg}','${uid(7)}','administer',null);
 insert into public.meetings(id,org_id,title,date,start_local_time) values('${meeting}','${org}','Titulo privado',current_date+1,'10:00');
 insert into public.meeting_revisions(id,org_id,meeting_id,revision,created_by,scheduled_start) values('${revision}','${org}','${meeting}',1,'${uid(3)}',now()+interval '1 day'),('${draft}','${org}','${meeting}',2,'${uid(3)}',now()+interval '1 day');
 insert into public.meeting_blocks(id,org_id,revision_id,sort_order,name,duration_seconds,team_id) values('${block}','${org}','${revision}',0,'Actividad pública',600,'${team}'),('${draftBlock}','${org}','${draft}',0,'Borrador secreto',100,'${team}');
 insert into public.block_details(org_id,block_id,notes,custom_fields_json) values('${org}','${block}','Nota privada','{"telefono":"privado"}');
+insert into public.block_subactivities(org_id,block_id,team_id,title,offset_seconds,duration_seconds,notes) values('${org}','${block}','${otherTeam}','Paralela privada',0,100,'Nota de Alabanza');
 insert into public.meeting_required_positions(id,org_id,meeting_id,team_id,role_id,priority) values('${position}','${org}','${meeting}','${team}','${uid(901)}','critical');
 insert into public.assignments(id,org_id,meeting_id,position_id,person_id) values('${assignment}','${org}','${meeting}','${position}','${person}');
 update public.meeting_revisions set published_at=now() where id='${revision}';update public.meetings set published_revision_id='${revision}',status='published' where id='${meeting}';
@@ -120,6 +121,22 @@ describe("SQL real y RLS con auth.uid simulado (no servicio Auth)", () => {
     expect(
       (await asUser(4, "select * from public.meeting_blocks")).rows,
     ).toHaveLength(1);
+  });
+  it("responsable del bloque padre no lee notas de una subactividad de otro equipo", async () => {
+    expect(
+      (await asUser(5, "select * from public.block_details")).rows,
+    ).toHaveLength(1);
+    expect(
+      (await asUser(5, "select * from public.block_subactivities")).rows,
+    ).toEqual([]);
+  });
+  it("equipo de la subactividad ve solo su contenido y no notas del bloque padre", async () => {
+    expect(
+      (await asUser(6, "select notes from public.block_subactivities")).rows,
+    ).toEqual([{ notes: "Nota de Alabanza" }]);
+    expect(
+      (await asUser(6, "select * from public.block_details")).rows,
+    ).toEqual([]);
   });
   it("planificador ve ambas revisiones y notas", async () => {
     expect(
