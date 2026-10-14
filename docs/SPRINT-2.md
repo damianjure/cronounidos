@@ -1,0 +1,70 @@
+# Sprint 2 — primer tramo del editor (14/10/2026)
+
+## Estado
+
+Continuación solicitada por el usuario, incluyendo reintento de Chrome. **Primer tramo implementado; Sprint 2 todavía no cerrado.** No se declara completo el MVP ni producción lista. Se mantienen PRD/DECISIONS/AGENTS, sin WhatsApp, OAuth Google ni ProPresenter.
+
+## Implementado
+
+- Listado `/cronograma`, creación `/cronograma/nueva` y editor `/cronograma/[id]` para usuarios aprobados/autorizados.
+- Crear reunión vacía o desde una plantilla existente del mismo org.
+- Timeline por handle con sensores mouse/touch/teclado, flechas arriba/abajo, duración editable y cálculo inmediato. Claves `client_key` estables aunque cambien los UUIDs físicos del snapshot.
+- Guardado optimista y rollback exacto del estado anterior, guardado manual de notas y mensajes de errores/conflictos. Las duraciones se guardan al salir del campo; notas/catálogos se guardan al pulsar Guardar.
+- Guardar borrador y Publicar cambios (guardar+publicar en **una transacción**). Metadatos título/fecha/hora/tipo/serie también se versionan: guardar un borrador no cambia los metadatos publicados.
+- Duplicar con seis grupos seleccionables. Confirmaciones de responsables y puestos copiados vuelven a `pending`, `responded_at=null`, IDs nuevos; historial del original intacto. Sin estructura se crea una reunión vacía. Notas incluye valores de campos personalizados y mensaje; recursos selecciona los vínculos de recursos normalizados.
+- Responsables por persona/equipo/rol de catálogo, canciones ordenadas, anuncios, mensaje, recursos/enlaces HTTPS; datos normalizados, no nombres escritos en custom fields.
+- Campos por instancia: texto/número/URL/fecha/selección/checkbox; validación Zod **y** SQL. Rechazo de claves que sustituyen columnas fundamentales.
+- Paralelas con título/equipo/offset/duración/notas, validadas dentro del bloque; no desplazan el eje principal.
+- Copia de plantillas no altera reuniones existentes; test del cambio de definición afectando solo instancias nuevas.
+- Demo `/demo/editor` con banner inequívoco, datos ficticios, persistencia/publicación simuladas y casilla de fallo para probar rollback. No tiene acceso a datos reales y no cambia autorizaciones; Server Actions siguen autorizando por sesión/RLS.
+
+## Contrato de datos
+
+La cuarta migración `20261014042412_meeting_editor.sql` agrega `draft_revision_id`, snapshots de metadatos, claves client_key, roles/equipos de asignación y `block_assignment_links` (tabla 30, con RLS).
+
+Cada guardar crea una revisión nueva con lock de reunión y versión esperada. Publicados siguen inmutables; se revocaron escrituras directas de tablas del editor a `authenticated`. Las mutaciones pasan por RPCs autorizadas y atómicas. No se borran versiones históricas automáticamente.
+
+Al guardar dentro de la misma reunión, las asignaciones canónicas se **reutilizan**, no se clonan sus confirmaciones. Al duplicar entre reuniones se crean asignaciones nuevas en Pendiente. Quitar una asignación del plan publicado registra `removed_from_published_plan`, no borra su respuesta previa. Los futuros consumidores deben consultar los vínculos de la revisión activa, no deducir el plan vigente únicamente desde `assignments.block_id` (ancla histórica).
+
+El editor de esta primera etapa exige grants de **organización** `plan`, `read_content`, `read_people`, `assign` o `administer`; el preset planificador ya los incluye. Un grant de equipo no se convierte automáticamente en acceso global. La edición parcial restringida a un equipo no está implementada todavía; queda pendiente, sin ampliar permisos para simularla.
+
+Horarios cliente y PostgreSQL usan IANA; casos DST ambiguos/no existentes se resuelven al instante más tardío, como PostgreSQL. Al teclear un horario/zona inválidos, el preview muestra un marcador en vez de romper el render. Índices de relaciones por bloque y caché React por request reducen consultas redundantes sin caché compartida entre usuarios.
+
+## Verificación
+
+- **131 pruebas / 6 suites** aprobadas: Auth/dominio/PWA, editor/rollback/fechas, RLS y RPCs SQL ejecutados en PGlite.
+- Cobertura de 7 módulos críticos: **97,57% líneas**, **88,65% ramas**, 93,87% funciones; umbral global 80%. No representa toda la UI ni los servicios externos.
+- Lint sin errores/warnings, typecheck strict y build de producción aprobados.
+- Audit de dependencias runtime: 0 vulnerabilidades; advisories dev de lint ya documentados en Sprints 0/1.
+- HTTP local del build: `/demo/editor`, `/`, `/cronograma`, manifest respondieron 200. HTML de demo contiene banner y timeline. Esto **no** valida hidratación, drag ni layout visual.
+- Playwright preparado: 28 casos desktop/mobile (18 base + 10 editor), incluyendo teclado, recálculo, rollback, duplicación, overflow y axe. **No aprobados**: Chrome no pudo iniciar.
+
+### Reintento Chrome
+
+Se reintentó un solo caso con Google Chrome instalado, un worker y `--max-failures=1`; terminó con `SIGABRT` antes de abrir la página. No se repitieron los 18 fallos idénticos. La alternativa de ventana normal falló: navegador `chrome` no disponible en Computer Use y Google Chrome sin aprobación de acceso. No se eludieron permisos ni se marcaron pruebas como verdes.
+
+Reporte de ese intento en `/tmp/chrono-retry-report`; no es un artefacto versionado/portátil. Para validar visualmente, habilitar un entorno de navegador permitido/CI y repetir las E2E. La demo puede probarse manualmente en Chrome con el servidor local.
+
+## Pendiente para cerrar Sprint 2
+
+- UI de CRUD de tipos de bloque y plantillas, aplicación selectiva a instancias existentes con confirmación; no hay actualizaciones masivas automáticas.
+- CRUD completo del directorio/catálogos y mensajes/series; hoy se seleccionan registros existentes.
+- Responsables por subactividad y edición de sus campos personalizados; la capa de datos guarda schema/campos de paralelas pero la UI de esta etapa no los configura.
+- Subida a Supabase Storage y flujo de cancelación; recursos externos existentes sí se pueden seleccionar/abrir.
+- Permisos de edición parcial por equipo, preservando campos/relaciones que el usuario no pueda leer.
+- E2E/visual/PWA real y Auth/PostgREST contra Supabase completo. Docker sigue inactivo; no se aplicó ninguna migración remota.
+- Continuar Sprints 3–5: confirmaciones UI, reemplazos/conflictos, cobertura/calendario/matriz, modo vivo/Realtime y feedback +10 min.
+
+## Configuración
+
+Se mantiene `SETUP.md`: proyecto **independiente** confirmado, ahora aplicar las **cuatro** migraciones en orden, bootstrap de admin, variables, SMTP/templates/redirects y Vercel. No se creó ni modificó otro Supabase. Sin configuración, el espacio interno muestra aviso y la demo sigue separada.
+
+Para probar solo la demo local, sin backend:
+
+```sh
+npm ci
+npm run dev
+# http://localhost:3000/demo/editor
+```
+
+En este host se usó `NEXT_BUILD_DIR=.next-sprint2-delivery` y puerto 3100 para preview de producción. Cambiar nombre de outputs cuando la limpieza de carpetas workspace esté restringida; coverage en `/tmp` funciona. No hubo push ni deploy.

@@ -2,7 +2,7 @@
 
 PWA en español para planificar y coordinar las reuniones de Unidos para Servir.
 
-**Estado:** código de los Sprints 0 y 1 implementado. No es todavía el MVP completo: editor, calendario/cobertura, operación en vivo y feedback corresponden a Sprints 2–5. Ver [informe de entrega](docs/SPRINTS-0-1.md) para las pruebas y limitaciones.
+**Estado:** Sprints 0/1 implementados y primer tramo del editor de Sprint 2 disponible ([informe](docs/SPRINT-2.md)). No es todavía el MVP completo: faltan funciones avanzadas del editor, calendario/cobertura, operación en vivo y feedback de Sprints 2–5. Ver [informe de entrega](docs/SPRINTS-0-1.md) para las pruebas y limitaciones.
 
 ## Ejecutar
 
@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-Abrí http://localhost:3000. Sin variables de Supabase se muestra explícitamente el estado **sin configurar**, no datos de demostración disfrazados de producción.
+Abrí http://localhost:3000. Para probar el editor sin backend, usá http://localhost:3000/demo/editor (datos ficticios, sin guardar datos reales). Sin variables de Supabase se muestra explícitamente el estado **sin configurar**, no datos de demostración disfrazados de producción.
 
 Para conectar datos, copiá `.env.example` a `.env.local` y completá las variables con un **nuevo proyecto independiente cronounidos**. Seguí [docs/SETUP.md](docs/SETUP.md) antes de aplicar migraciones o habilitar cuentas. No reutilizar Supabase de caja-chica ni docu-media-us.
 
