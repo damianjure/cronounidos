@@ -25,7 +25,7 @@ test("reordenar con botones recalcula y rollback restaura orden previo", async (
       exact: true,
     })
     .click();
-  await expect(page.getByRole("alert")).toContainText("Fallo simulado");
+  await expect(page.locator(".notice.error[role=alert]")).toContainText("Fallo simulado");
   await expect(items.first()).toContainText("Alabanza y Adoración");
 });
 test("duración recalcula hora siguiente y se revierte si falla", async ({
@@ -44,7 +44,7 @@ test("duración recalcula hora siguiente y se revierte si falla", async ({
     .check();
   await duration.fill("20");
   await duration.press("Tab");
-  await expect(page.getByRole("alert")).toContainText("Fallo simulado");
+  await expect(page.locator(".notice.error[role=alert]")).toContainText("Fallo simulado");
   await expect(duration).toHaveValue("15");
 });
 test("drag por teclado mantiene alternativa accesible", async ({ page }) => {
@@ -54,7 +54,10 @@ test("drag por teclado mantiene alternativa accesible", async ({ page }) => {
   });
   await handle.focus();
   await page.keyboard.press("Space");
+  await expect(handle).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("ArrowDown");
+  // dnd-kit updates keyboard collision after its sortable transition.
+  await page.waitForTimeout(450);
   await page.keyboard.press("Space");
   await expect(page.locator(".editor-block").first()).toContainText(
     "Alabanza y Adoración",

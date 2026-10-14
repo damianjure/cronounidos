@@ -152,7 +152,7 @@ test("login/registro con etiquetas y aviso sin backend", async ({ page }) => {
     .getByLabel("Contraseña", { exact: true })
     .fill("clave-ficticia-segura");
   await page.getByRole("button", { name: "Ingresar a mi cuenta" }).click();
-  await expect(page.getByRole("alert")).toContainText(
+  await expect(page.locator(".form-message.error[role=alert]")).toContainText(
     "Falta conectar Supabase",
   );
   await page.getByRole("link", { name: "Crear cuenta" }).click();

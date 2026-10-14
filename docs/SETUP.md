@@ -2,7 +2,7 @@
 
 ## Estado actual
 
-La app de Sprints 0/1 y el primer tramo de Sprint 2 están implementados (ver SPRINT-2.md); no se creó ni modificó ningún proyecto remoto. Falta confirmar el nuevo proyecto Supabase y configurar Auth, el primer administrador y Vercel. No usar **caja-chica**, **docu-media-us** ni ningún proyecto ajeno.
+La app de Sprints 0/1 y un tramo avanzado de Sprint 2 están implementados (ver SPRINT-2.md); no se creó ni modificó ningún proyecto remoto. Falta confirmar el nuevo proyecto Supabase y configurar Auth, el primer administrador y Vercel. No usar **caja-chica**, **docu-media-us** ni ningún proyecto ajeno.
 
 ## 1. Entorno local
 
@@ -34,7 +34,7 @@ Nunca poner secret/service-role keys en `NEXT_PUBLIC_*`, GitHub, logs o formular
 ## 2. Supabase independiente
 
 1. Crear un proyecto nuevo llamado `cronounidos` en la organización elegida por el usuario. **Pendiente de elección/confirmación de project ref**.
-2. Revisar las cuatro migraciones en `supabase/migrations/` y probarlas localmente.
+2. Revisar las siete migraciones en `supabase/migrations/` y probarlas localmente. La sexta crea `crono-resources` como bucket privado, limita subidas a PNG/JPEG/WebP/PDF de hasta 5 MB y agrega políticas Storage por organización. No cambiarlo a público. La séptima agrega cancelación versionada de reuniones.
 3. Confirmar el project ref de destino antes de vincular o aplicar a remoto. No se ejecutó SQL remoto en esta entrega.
 4. Aplicar migraciones usando la CLI a ese proyecto confirmado; exponer solo `public` en Data API. `private` **no** debe estar expuesto. Las tablas tienen GRANT explícitos y RLS activo.
 5. Ejecutar los advisors de Supabase y una prueba de API con identidades reales de prueba, incluyendo `anon`, pendientes y miembros de dos organizaciones.
@@ -86,12 +86,12 @@ En desarrollo local se puede usar el org UUID ficticio de `seed.sql`, pero **no*
 
 Pendiente vincular el proyecto Vercel a este GitHub, configurar el entorno (Preview y Production separados), HTTPS y dominio. Build: `npm run build`; Next.js detectado automáticamente. Node 24. El repositorio oficial es https://github.com/damianjure/cronounidos; se recomienda mantenerlo privado.
 
-No se hizo deploy ni se publicó una preview en esta entrega. Cualquier dominio como `app.unidosparaservir.org` debe confirmarse por el usuario. Realtime, bucket privado Storage, scheduler de feedback y proveedor de correo de feedback se configuran en Sprints 2–5; no se simulan como servicios disponibles.
+No se hizo deploy ni se publicó una preview en esta entrega. Cualquier dominio como `app.unidosparaservir.org` debe confirmarse por el usuario. El bucket privado Storage está versionado y probado **solo localmente**; Realtime, scheduler de feedback y proveedor de correo de feedback corresponden a Sprints 4–5. No se simulan como servicios remotos disponibles.
 
 ## 6. Verificación que falta sobre servicios reales
 
 - Supabase remoto independiente: migraciones, advisors, Auth/SMTP, redirecciones, cookies SSR y renovación, PostgREST/RLS y comprobación de que `private` no se exponga. Localmente se probaron registro, confirmación, invitación y recuperación **hasta cambiar la contraseña** con plantillas SSR; las cuentas quedaron pendientes hasta aprobación. También se probaron PostgREST/JWT/RLS, aprobación y suspensión por UI, ACL por equipo y aislamiento de dos organizaciones.
-- Playwright CLI/CI en un runner donde Chrome pueda arrancar; en este host Chrome instalado y Chrome for Testing abortan con `SIGABRT` antes de las aserciones. El navegador integrado sí permitió comprobaciones funcionales desktop/mobile, PWA, axe y Auth local, pero no reemplaza la corrida de CI.
+- Playwright CLI pasó **28/28** casos desktop/mobile con el Chrome instalado en este host usando `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`. Falta repetir en CI y automatizar E2E autenticadas de catálogos/Storage/cancelación; el navegador integrado sí verificó esos flujos localmente.
 - Instalación PWA en dispositivos reales iOS/Android, modo standalone y lectores de pantalla; el navegador integrado verificó manifest, worker, offline y teclado, pero no dispositivos reales.
 - Email y bootstrap; deploy/preview Vercel, advisors, observabilidad. No afirmar listo para producción hasta completar esas comprobaciones.
 
@@ -105,7 +105,7 @@ NEXT_BUILD_DIR=.next-validation-NUEVO npm run build
 NEXT_BUILD_DIR=.next-validation-NUEVO npm run start
 ```
 
-Cambiar `NUEVO` por un identificador nuevo en cada ejecución. Playwright admite `E2E_PORT` (3100 por defecto), `E2E_OUTPUT_DIR`, `E2E_REPORT_DIR` y, si corresponde, `PLAYWRIGHT_CHROMIUM_EXECUTABLE`. Estas opciones facilitan probar un servidor de producción ya iniciado en otro puerto y ubicar artefactos: **no** resuelven el aborto de Chrome. Los reportes/builds están ignorados por Git. En un checkout limpio de CI usar las rutas predeterminadas.
+Cambiar `NUEVO` por un identificador nuevo en cada ejecución. Playwright admite `E2E_PORT` (3100 por defecto), `E2E_OUTPUT_DIR`, `E2E_REPORT_DIR` y, si corresponde, `PLAYWRIGHT_CHROMIUM_EXECUTABLE`. Estas opciones facilitan probar un servidor de producción ya iniciado en otro puerto y ubicar artefactos. En este host Chrome instalado funcionó con `PLAYWRIGHT_CHROMIUM_EXECUTABLE`; el navegador descargado de Playwright no estaba presente. Los reportes/builds están ignorados por Git. En un checkout limpio de CI usar las rutas predeterminadas.
 
 ## Referencias técnicas verificadas
 
