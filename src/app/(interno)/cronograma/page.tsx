@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { requireAccess } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-export default async function Schedule() {
+import { CancelMeetingForm } from "@/components/editor/cancel-meeting-form";
+export default async function Schedule({ searchParams }: { searchParams: Promise<{ error?: string; cancelled?: string }> }) {
   const a = await requireAccess();
   if (a.state !== "approved") return null;
+  const params = await searchParams;
   const [rows, permission] = await Promise.all([
     a.client
       .from("meetings")
-      .select("id,title,date,status,draft_revision_id,published_revision_id")
+      .select("id,title,date,status,version,draft_revision_id,published_revision_id")
       .eq("org_id", a.orgId)
       .order("date")
       .limit(100),
@@ -27,22 +29,25 @@ export default async function Schedule() {
         {permission.data && (
           <div className="editor-toolbar">
             <Button asChild variant="outline"><Link href="/cronograma/catalogos">Tipos y plantillas</Link></Button>
+            <Button asChild variant="outline"><Link href="/cronograma/contenidos">Contenidos</Link></Button>
             <Button asChild><Link href="/cronograma/nueva">Nueva reunión</Link></Button>
           </div>
         )}
       </div>
+      {params.error && <p className="notice error" role="alert">{params.error === "cancelar" ? "No se pudo cancelar la reunión. Revisá permisos o cambios recientes." : "Datos inválidos."}</p>}
+      {params.cancelled && <p className="notice" role="status">Reunión cancelada. Ya no aparece en la agenda pública.</p>}
       <section className="panel">
         <ul className="member-list">
           {rows.data?.map((m) => (
             <li key={m.id}>
               <h2>{m.title}</h2>
               <p className="muted">
-                {m.date} · {m.status === "published" ? "Publicada" : "Borrador"}
+                {m.date} · {m.status === "published" ? "Publicada" : m.status === "cancelled" ? "Cancelada" : m.status === "finished" ? "Finalizada" : "Borrador"}
                 {m.draft_revision_id && m.published_revision_id
                   ? " · Con cambios sin publicar"
                   : ""}
               </p>
-              <Button asChild variant="outline">
+              {m.status !== "cancelled" && m.status !== "finished" && <Button asChild variant="outline">
                 <Link
                   href={
                     permission.data
@@ -52,7 +57,8 @@ export default async function Schedule() {
                 >
                   {permission.data ? "Abrir editor" : "Ver agenda pública"}
                 </Link>
-              </Button>
+              </Button>}
+              {permission.data && m.status !== "cancelled" && m.status !== "finished" && <CancelMeetingForm id={m.id} version={m.version} />}
             </li>
           ))}
         </ul>

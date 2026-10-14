@@ -502,3 +502,16 @@ it("tipo versionado solo actualiza una instancia elegida explícitamente", async
   );
   expect(updated.rows[0].type_version).toBe(2);
 });
+it("cancelar requiere plan y versión vigente; oculta agenda sin borrar historial", async () => {
+  const meeting = snapshotSchema.parse(await rpc(admin, "create_editor_meeting", [org, metadata, null]));
+  const published = snapshotSchema.parse(await rpc(admin, "publish_editor_snapshot", [
+    meeting.meetingId, meeting.version, meeting.metadata, [emptyBlock("Actividad publicada")],
+  ]));
+  expect((await actor(null, "select * from public.public_agenda($1)", [meeting.meetingId])).rows).toHaveLength(1);
+  await expect(rpc(member, "cancel_editor_meeting", [meeting.meetingId, published.version])).rejects.toThrow(/Forbidden/);
+  await expect(rpc(admin, "cancel_editor_meeting", [meeting.meetingId, meeting.version])).rejects.toThrow(/Version conflict/);
+  await rpc(admin, "cancel_editor_meeting", [meeting.meetingId, published.version]);
+  expect((await actor(null, "select * from public.public_agenda($1)", [meeting.meetingId])).rows).toEqual([]);
+  expect((await db.query("select count(*)::int as count from public.meeting_revisions where meeting_id=$1", [meeting.meetingId])).rows).toEqual([{ count: 2 }]);
+  await expect(rpc(admin, "cancel_editor_meeting", [meeting.meetingId, published.version + 1])).rejects.toThrow(/Meeting closed/);
+});

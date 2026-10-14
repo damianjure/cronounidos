@@ -1,5 +1,6 @@
 "use server";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { editorContext } from "@/lib/editor/server";
 import {
@@ -71,4 +72,21 @@ export async function createMeeting(
   if (error) return { message: readableError(error) };
   const snapshot = snapshotSchema.parse(data);
   redirect(`/cronograma/${snapshot.meetingId}`);
+}
+
+export async function cancelMeeting(form: FormData) {
+  const meeting = z.uuid().safeParse(form.get("meetingId"));
+  const version = z.coerce.number().int().positive().safeParse(form.get("version"));
+  if (!meeting.success || !version.success)
+    redirect("/cronograma?error=datos");
+  const a = await editorContext();
+  const { error } = await a.client.rpc("cancel_editor_meeting", {
+    p_meeting: meeting.data,
+    p_expected_version: version.data,
+  });
+  if (error) redirect("/cronograma?error=cancelar");
+  revalidatePath("/cronograma");
+  revalidatePath("/");
+  revalidatePath(`/reuniones/${meeting.data}`);
+  redirect("/cronograma?cancelled=1");
 }
