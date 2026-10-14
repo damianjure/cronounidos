@@ -17,5 +17,6 @@ supabase/.temp/
 
 test-results-*/
 playwright-report-*/
+.playwright-mcp/
 
 next-env.d.ts

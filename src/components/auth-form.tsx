@@ -54,6 +54,8 @@ export function AuthForm({
             <input
               type="password"
               name="password"
+              aria-label="Contraseña"
+              aria-describedby="password-requirements"
               minLength={10}
               maxLength={128}
               autoComplete={
@@ -61,7 +63,9 @@ export function AuthForm({
               }
               required
             />
-            <span className="muted">Al menos 10 caracteres.</span>
+            <span id="password-requirements" className="muted">
+              Al menos 10 caracteres.
+            </span>
           </label>
         )}
         {state.message && (
