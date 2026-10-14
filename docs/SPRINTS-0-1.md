@@ -32,8 +32,8 @@ Se leyó `AGENTS.md` y toda la documentación aprobada antes de implementar. El 
 | --- | --- |
 | Lint | Pasó, sin errores ni warnings de código fuente |
 | Typecheck | Pasó con TypeScript strict |
-| Unit + Auth mockeado + SQL/RLS + PWA worker + fundamentos del editor | 132 pruebas, 6 suites; pasando |
-| Cobertura de cinco módulos críticos (dominio, env, validaciones, autorización, acciones Auth) | 100% líneas/statements/funciones; 95.61% ramas; umbral 80% |
+| Unit + Auth mockeado + SQL/RLS + PWA worker + fundamentos del editor | 134 pruebas, 6 suites; pasando |
+| Cobertura de módulos críticos configurados | 97,57% líneas, 88,65% ramas, 93,87% funciones; umbral 80% |
 | Build de producción | Pasó usando `NEXT_BUILD_DIR` aislado por restricciones de limpieza del host |
 | HTTP smoke de 8 rutas/manifiesto/ícono/worker | Respuestas 200 del servidor de producción local; no sustituye comprobación visual |
 | Auditoría dependencias runtime | `npm audit --omit=dev`: 0 vulnerabilidades |
@@ -42,7 +42,7 @@ Se leyó `AGENTS.md` y toda la documentación aprobada antes de implementar. El 
 | Navegador integrado (Playwright MCP) | Pasaron comprobaciones reales en desktop y móvil: navegación, overflow, tema, preview, PWA/offline/cache/logout, login/registro sin backend, rutas protegidas, foco y axe WCAG A/AA/2.1 AA sin violaciones en agenda pública |
 | Supabase local (Colima/Docker) | Cuatro migraciones aplicadas; Auth, correo local, PostgREST y DB probados con cuentas ficticias, aprobación, invitación, recuperación, suspensión, grants, RLS y aislamiento entre organizaciones |
 
-Cobertura **no significa 100% de toda la aplicación**: son los cinco módulos críticos configurados en Vitest. PostgreSQL/RLS se ejecuta en PGlite con roles anon/authenticated y `auth.uid` simulado; además se probaron flujos con el stack local de Supabase y JWT real. Storage y Realtime aún no tienen flujos funcionales del Sprint 0/1. Las pruebas Auth TS usan mocks de la SDK. Las pruebas de worker usan un entorno worker simulado; la comprobación PWA en navegador fue adicional, no una instalación en dispositivo real.
+Cobertura **no significa 100% de toda la aplicación**: son los módulos críticos configurados en Vitest. PostgreSQL/RLS se ejecuta en PGlite con roles anon/authenticated y `auth.uid` simulado; además se probaron flujos con el stack local de Supabase y JWT real. Storage y Realtime aún no tienen flujos funcionales del Sprint 0/1. Las pruebas Auth TS usan mocks de la SDK. Las pruebas de worker usan un entorno worker simulado; la comprobación PWA en navegador fue adicional, no una instalación en dispositivo real.
 
 La ejecución estándar de coverage en carpeta workspace generó métricas pero falló al limpiar `.tmp` por EPERM. La ejecución con `--coverage.reportsDirectory=/tmp/...` pasó y terminó exit 0. El primer build también pasó con `.next`; para repetición se usaron carpetas nuevas soportadas por `NEXT_BUILD_DIR`. No se ocultaron errores con skips.
 
@@ -52,7 +52,7 @@ La ejecución estándar de coverage en carpeta workspace generó métricas pero 
 - Registro desde la UI, mensaje en Mailpit y verificación de correo con enlace nuevo; antes de aprobación, la sesión solo accedió a `/pendiente` y la ruta administrativa redirigió.
 - Bootstrap confiable del primer administrador según `SETUP.md`; aprobación de integrante con rol de responsable de Media desde la UI. El responsable no accedió a administración y vio solo una persona de su equipo. En PostgREST, `anon` recibió 401.
 - Con el **mismo JWT** de un miembro, suspender su membresía redujo las personas visibles de una a cero inmediatamente; se restauró el estado de prueba. Una segunda organización/persona ficticia temporal no se filtró a la primera; se eliminó el fixture.
-- Invitación desde la UI creó un acceso pendiente y Mailpit recibió el correo. Recuperación desde la UI mostró la respuesta neutra y Mailpit recibió el correo. Suspensión y reaprobación desde la UI también funcionaron. No se verificó aún el consumo completo de los enlaces de invitación/recuperación ni renovación de sesión.
+- Invitación desde la UI creó un acceso pendiente y Mailpit recibió el correo. La primera prueba reveló que la plantilla local predeterminada enviaba la sesión en un fragmento a un endpoint que esperaba `token_hash`, y que Next redirigía a `localhost` mientras la cookie se guardaba para `127.0.0.1`. Se configuraron plantillas SSR versionadas y redirección canónica con `APP_URL`. Después pasaron los enlaces completos de invitación, recuperación y registro: verificaron OTP, permitieron establecer/cambiar contraseña y llevaron a `/pendiente` sin otorgar acceso interno. Suspensión y reaprobación desde la UI también funcionaron. Renovación de sesión a largo plazo sigue sin probarse.
 - En navegador real se corrigió la asociación accesible del campo Contraseña, detectada al correr el flujo de login. Luego pasaron el flujo y axe sin violaciones.
 
 ## Casos de seguridad cubiertos
@@ -74,7 +74,7 @@ Checklist operativa completa en `SETUP.md`: confirmar **nuevo** Supabase/project
 
 No implementados aún: CRUD/editor de reuniones y directorio completo, duplicación/presets UI, drag táctil, calendario/matriz, confirmaciones UI/concurrencia del editor, solapamientos/excepciones UI, ejecución en vivo/Realtime, Storage upload, cierre y feedback +10 min/scheduler/email. Los tests actuales de cálculo/cobertura/reset son fundamentos de dominio, no una simulación de esos flujos completos.
 
-**No tocar** Supabase de otros proyectos. No se añadieron WhatsApp, Google OAuth, ProPresenter ni FastAPI. El bloqueo del runner E2E, la prueba de enlaces email completos, dispositivos reales y la configuración de producción siguen pendientes; no se deben presentar como verificados.
+**No tocar** Supabase de otros proyectos. No se añadieron WhatsApp, Google OAuth, ProPresenter ni FastAPI. El bloqueo del runner E2E, dispositivos reales, renovación de sesión y configuración de producción siguen pendientes; no se deben presentar como verificados.
 
 ## Archivos relevantes
 
