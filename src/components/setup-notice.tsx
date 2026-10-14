@@ -5,7 +5,7 @@ export function SetupNotice() {
       <strong>Falta conectar Supabase</strong>
       <p>
         La aplicación base está lista. Para usar cuentas y reuniones, configurá
-        el proyecto independiente de Chrono Unidos. No se muestran datos de
+        el proyecto independiente de Crono Unidos. No se muestran datos de
         demostración como si fueran reales.
       </p>
       <Link href="/configuracion" className="button button-ghost">

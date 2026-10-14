@@ -23,7 +23,7 @@ export function AuthForm({
       <p className="muted" style={{ marginTop: 12 }}>
         {mode === "signup"
           ? "El registro no habilita acceso interno: tu cuenta necesita aprobación."
-          : "Usá el correo de tu cuenta de Chrono Unidos."}
+          : "Usá el correo de tu cuenta de Crono Unidos."}
       </p>
       <form action={action}>
         {mode === "signup" && (

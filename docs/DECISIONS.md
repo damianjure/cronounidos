@@ -1,4 +1,4 @@
-# Decisiones aprobadas — Chrono Unidos
+# Decisiones aprobadas — Crono Unidos
 
 Las siguientes decisiones son requisitos cerrados (17 preguntas):
 1. Campos personalizados por instancia **y** por tipo de bloque reutilizable.

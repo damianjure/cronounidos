@@ -55,7 +55,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <Clock3 size={25} />
           </span>
           <span>
-            Chrono Unidos<small>Unidos para Servir</small>
+            Crono Unidos<small>Unidos para Servir</small>
           </span>
         </Link>
         <nav aria-label="Navegación principal">
@@ -81,7 +81,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <span className="brand-mark">
             <Clock3 size={23} />
           </span>
-          <span>Chrono Unidos</span>
+          <span>Crono Unidos</span>
         </Link>
         <span className="muted">Unidos para Servir</span>
         <div className="desktop-tools">

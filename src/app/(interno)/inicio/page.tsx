@@ -10,7 +10,7 @@ export default async function Dashboard() {
         <div>
           <h1>Inicio del equipo</h1>
           <p className="muted">
-            Tu cuenta está aprobada. La base de Chrono Unidos ya está conectada.
+            Tu cuenta está aprobada. La base de Crono Unidos ya está conectada.
           </p>
         </div>
         <form action={signOut}>

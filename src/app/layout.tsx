@@ -3,13 +3,13 @@ import { Providers } from "@/components/providers";
 import { Shell } from "@/components/shell";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: { default: "Chrono Unidos", template: "%s · Chrono Unidos" },
+  title: { default: "Crono Unidos", template: "%s · Crono Unidos" },
   description:
     "Planificación y coordinación de reuniones de Unidos para Servir.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Chrono Unidos",
+    title: "Crono Unidos",
     statusBarStyle: "default",
   },
   icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },

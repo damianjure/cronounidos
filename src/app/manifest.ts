@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Chrono Unidos · Unidos para Servir",
-    short_name: "Chrono Unidos",
+    name: "Crono Unidos · Unidos para Servir",
+    short_name: "Crono Unidos",
     description: "Coordinación de reuniones y equipos",
     start_url: "/",
     scope: "/",

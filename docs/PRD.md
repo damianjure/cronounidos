@@ -1,4 +1,4 @@
-# PRD v2.0 — Chrono Unidos
+# PRD v2.0 — Crono Unidos
 **Estado:** MVP funcionalmente definido, aún no implementado. **Fecha:** octubre 2026.
 **Producto:** PWA de planificación, coordinación y operación de reuniones de Unidos para Servir.
 

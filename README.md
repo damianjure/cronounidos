@@ -1,4 +1,4 @@
-# Chrono Unidos
+# Crono Unidos
 
 PWA en español para planificar y coordinar las reuniones de Unidos para Servir.
 
