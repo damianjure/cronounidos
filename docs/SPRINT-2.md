@@ -22,7 +22,7 @@ Continuación solicitada por el usuario, incluyendo reintento de Chrome. **Prime
 
 La cuarta migración `20261014042412_meeting_editor.sql` agrega `draft_revision_id`, snapshots de metadatos, claves client_key, roles/equipos de asignación y `block_assignment_links` (tabla 30, con RLS).
 
-Cada guardar crea una revisión nueva con lock de reunión y versión esperada. Publicados siguen inmutables; se revocaron escrituras directas de tablas del editor a `authenticated`. Las mutaciones pasan por RPCs autorizadas y atómicas. No se borran versiones históricas automáticamente.
+Cada guardar crea una revisión nueva con lock de reunión y versión esperada. Publicados siguen inmutables; se revocaron escrituras directas de tablas del editor a `authenticated`. Las mutaciones pasan por RPCs autorizadas y atómicas. También se revocan cambios directos de asignaciones: no se puede transferir una confirmación a otra persona ni confirmar usando solo permiso assign. Confirmaciones usan su RPC estrecha; asignación/reemplazo de equipos sin permisos del editor requerirá sus RPCs del Sprint 3. No se borran versiones históricas automáticamente.
 
 Al guardar dentro de la misma reunión, las asignaciones canónicas se **reutilizan**, no se clonan sus confirmaciones. Al duplicar entre reuniones se crean asignaciones nuevas en Pendiente. Quitar una asignación del plan publicado registra `removed_from_published_plan`, no borra su respuesta previa. Los futuros consumidores deben consultar los vínculos de la revisión activa, no deducir el plan vigente únicamente desde `assignments.block_id` (ancla histórica).
 
@@ -32,7 +32,7 @@ Horarios cliente y PostgreSQL usan IANA; casos DST ambiguos/no existentes se res
 
 ## Verificación
 
-- **131 pruebas / 6 suites** aprobadas: Auth/dominio/PWA, editor/rollback/fechas, RLS y RPCs SQL ejecutados en PGlite.
+- **132 pruebas / 6 suites** aprobadas: Auth/dominio/PWA, editor/rollback/fechas, RLS y RPCs SQL ejecutados en PGlite.
 - Cobertura de 7 módulos críticos: **97,57% líneas**, **88,65% ramas**, 93,87% funciones; umbral global 80%. No representa toda la UI ni los servicios externos.
 - Lint sin errores/warnings, typecheck strict y build de producción aprobados.
 - Audit de dependencias runtime: 0 vulnerabilidades; advisories dev de lint ya documentados en Sprints 0/1.

@@ -446,3 +446,20 @@ it("remover responsable de publicado audita sin borrar su confirmación históri
     ).rows,
   ).toEqual([{ event: "removed_from_published_plan" }]);
 });
+it("permiso de administración no permite transferir persona/confirmación por UPDATE de asignación", async () => {
+  await expect(
+    actor(
+      admin,
+      "update public.assignments set person_id=$2,status=$3 where id=$1",
+      [canonical, id(102), "confirmed"],
+    ),
+  ).rejects.toThrow(/permission denied/);
+  expect(
+    (
+      await db.query(
+        "select person_id,status from public.assignments where id=$1",
+        [canonical],
+      )
+    ).rows,
+  ).toEqual([{ person_id: id(101), status: "confirmed" }]);
+});

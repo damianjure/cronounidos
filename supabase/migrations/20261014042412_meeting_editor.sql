@@ -239,3 +239,7 @@ create index resource_links_block_idx on public.resource_links(block_id);
 create index subactivities_block_idx on public.block_subactivities(block_id);
 create index assignments_meeting_idx on public.assignments(meeting_id);
 create index assignments_block_idx on public.assignments(block_id);
+-- Canonical identity must not be reassigned while carrying a previous person's
+-- confirmed response. Creation/replacement uses editor RPCs, confirmations use
+-- confirm_assignment, and future team-only assignment mutations need narrow RPCs.
+revoke insert,update,delete on public.assignments from authenticated;

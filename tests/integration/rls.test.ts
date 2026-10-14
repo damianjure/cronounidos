@@ -373,14 +373,12 @@ describe("SQL real y RLS con auth.uid simulado (no servicio Auth)", () => {
     ]);
   });
   it("integrante no puede reasignarse una posición mediante UPDATE directo", async () => {
-    expect(
-      (
-        await asUser(
-          4,
-          `update public.assignments set person_id='${uid(803)}' where id='${assignment}' returning id`,
-        )
-      ).rows,
-    ).toEqual([]);
+    await expect(
+      asUser(
+        4,
+        `update public.assignments set person_id='${uid(803)}' where id='${assignment}' returning id`,
+      ),
+    ).rejects.toThrow(/permission denied/);
   });
   it("solo admin suspende a terceros y jamás a sí mismo", async () => {
     await expect(
