@@ -105,6 +105,7 @@ it("guardar snapshot persiste entidades y participantes pendientes", async () =>
       clientKey: crypto.randomUUID(),
       title: "Actividad paralela",
       teamId: id(202),
+      personId: id(101),
       offsetSeconds: 10,
       durationSeconds: 50,
       notes: "Nota paralela",
@@ -115,6 +116,7 @@ it("guardar snapshot persiste entidades y participantes pendientes", async () =>
   current = await save(current, [b]);
   expect(current.version).toBe(2);
   expect(current.blocks[0].songIds).toEqual([id(601)]);
+  expect(current.blocks[0].subactivities[0].personId).toBe(id(101));
   canonical = current.blocks[0].responsibles[0].assignmentId!;
   expect(
     (
@@ -462,4 +464,41 @@ it("permiso de administración no permite transferir persona/confirmación por U
       )
     ).rows,
   ).toEqual([{ person_id: id(101), status: "confirmed" }]);
+});
+it("tipo versionado solo actualiza una instancia elegida explícitamente", async () => {
+  const typeId = id(501);
+  const meeting = snapshotSchema.parse(
+    await rpc(admin, "create_editor_meeting", [org, metadata, null]),
+  );
+  const block = emptyBlock("Prueba de sonido", {
+    id: typeId,
+    name: "Prueba de sonido",
+    fieldSchema: [],
+  });
+  const first = await save(meeting, [block]);
+  const original = first.blocks[0];
+  const versionBefore = await db.query<{ type_version: number }>(
+    "select type_version from public.meeting_blocks where id=$1",
+    [original.id],
+  );
+  expect(versionBefore.rows[0].type_version).toBe(1);
+  const newFields = [{ key: "indicacion", label: "Indicación", type: "text" }];
+  await db.query(
+    "update public.block_types set version=2,field_schema_json=$2 where id=$1",
+    [typeId, newFields],
+  );
+  const unchanged = await save(first);
+  const oldRow = await db.query<{ type_version: number }>(
+    "select type_version from public.meeting_blocks where id=$1",
+    [unchanged.blocks[0].id],
+  );
+  expect(oldRow.rows[0].type_version).toBe(1);
+  const refreshed = await save(unchanged, [
+    { ...unchanged.blocks[0], fieldSchema: newFields as typeof block.fieldSchema },
+  ]);
+  const updated = await db.query<{ type_version: number }>(
+    "select type_version from public.meeting_blocks where id=$1",
+    [refreshed.blocks[0].id],
+  );
+  expect(updated.rows[0].type_version).toBe(2);
 });

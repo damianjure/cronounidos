@@ -9,7 +9,9 @@ import {
   safeUrl,
   validateFields,
   readableError,
+  fieldDefinition,
 } from "@/lib/editor/model";
+import { templateBlocks } from "@/lib/editor/templates";
 const fixture = () => ({
   meetingId: crypto.randomUUID(),
   version: 1,
@@ -50,12 +52,32 @@ it("snapshot valida fecha real y zona IANA", () => {
   s.metadata.timezone = "Bad/Zone";
   expect(snapshotSchema.safeParse(s).success).toBe(false);
 });
+it("plantilla separa IDs físicos y confirmaciones del origen", () => {
+  const source = snapshotSchema.parse(fixture());
+  source.blocks[0].id = crypto.randomUUID();
+  source.blocks[0].responsibles = [{
+    assignmentId: crypto.randomUUID(),
+    personId: crypto.randomUUID(),
+    teamId: null,
+    roleId: null,
+  }];
+  const blocks = templateBlocks(source);
+  expect(blocks[0].id).toBeNull();
+  expect(blocks[0].clientKey).not.toBe(source.blocks[0].clientKey);
+  expect(blocks[0].responsibles[0].assignmentId).toBeNull();
+  expect(source.blocks[0].responsibles[0].assignmentId).not.toBeNull();
+});
+it("campo de selección exige opciones útiles y únicas", () => {
+  expect(fieldDefinition.safeParse({ key: "modo", label: "Modo", type: "select", options: [] }).success).toBe(false);
+  expect(fieldDefinition.safeParse({ key: "modo", label: "Modo", type: "select", options: ["A", "A"] }).success).toBe(false);
+});
 it("no permite actividades paralelas fuera de su padre", () => {
   const s = fixture();
   s.blocks[0].subactivities.push({
     clientKey: crypto.randomUUID(),
     title: "Paralela",
     teamId: null,
+    personId: null,
     offsetSeconds: 299,
     durationSeconds: 5,
     notes: "",
@@ -191,6 +213,7 @@ it("paralela nunca cambia duración del eje principal", () => {
       clientKey: crypto.randomUUID(),
       title: "Paralela",
       teamId: null,
+      personId: null,
       offsetSeconds: 0,
       durationSeconds: 20,
       notes: "",

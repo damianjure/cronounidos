@@ -25,9 +25,10 @@ export default async function Schedule() {
           </p>
         </div>
         {permission.data && (
-          <Button asChild>
-            <Link href="/cronograma/nueva">Nueva reunión</Link>
-          </Button>
+          <div className="editor-toolbar">
+            <Button asChild variant="outline"><Link href="/cronograma/catalogos">Tipos y plantillas</Link></Button>
+            <Button asChild><Link href="/cronograma/nueva">Nueva reunión</Link></Button>
+          </div>
         )}
       </div>
       <section className="panel">

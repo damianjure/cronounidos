@@ -23,6 +23,7 @@ import {
   saveMeeting,
   duplicateMeeting,
 } from "@/app/(interno)/cronograma/actions";
+import { saveTemplate } from "@/app/(interno)/cronograma/catalogos/actions";
 import {
   safeUrl,
   emptyBlock,
@@ -31,6 +32,7 @@ import {
   snapshotSchema,
   defaultCopyOptions,
   copyForPreview,
+  validateFields,
   type Catalog,
   type CatalogItem,
   type EditorSnapshot,
@@ -144,6 +146,7 @@ export function MeetingEditor({
   );
   const times = plannedTimes(snapshot.metadata, snapshot.blocks);
   const active = snapshot.blocks.find((b) => b.clientKey === selected);
+  const currentType = catalog.blockTypes.find((t) => t.id === active?.blockTypeId);
   const [lastSaved, setLastSaved] = useState(initial);
   const dirty = JSON.stringify(snapshot) !== JSON.stringify(lastSaved);
   const edit = (patch: Partial<EditorBlock>) => {
@@ -154,6 +157,17 @@ export function MeetingEditor({
       ),
     }));
     setMessage("");
+  };
+  const editSub = (
+    index: number,
+    patch: Partial<EditorBlock["subactivities"][number]>,
+  ) => {
+    if (!active) return;
+    edit({
+      subactivities: active.subactivities.map((sub, current) =>
+        current === index ? { ...sub, ...patch } : sub,
+      ),
+    });
   };
   async function persist(
     next: EditorSnapshot,
@@ -235,6 +249,17 @@ export function MeetingEditor({
           </p>
         </div>
         <div className="editor-toolbar">
+          {!demo && (
+            <form action={saveTemplate} className="editor-toolbar">
+              <input type="hidden" name="meetingId" value={snapshot.meetingId} />
+              <input type="hidden" name="version" value={snapshot.version} />
+              <label className="field">
+                Nombre de la plantilla
+                <input name="name" defaultValue={snapshot.metadata.title} minLength={2} maxLength={120} required />
+              </label>
+              <Button disabled={busy || dirty} variant="outline">Guardar como plantilla</Button>
+            </form>
+          )}
           <Button
             disabled={busy}
             variant="outline"
@@ -555,6 +580,33 @@ export function MeetingEditor({
                 onSchema={(fieldSchema) => edit({ fieldSchema })}
                 onValues={(customFields) => edit({ customFields })}
               />
+              {currentType &&
+                JSON.stringify(currentType.fieldSchema) !==
+                  JSON.stringify(active.fieldSchema) && (
+                  <div className="notice">
+                    <p>Hay una versión nueva de este tipo. Esta instancia conserva su definición hasta que decidas actualizarla.</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => {
+                        if (!window.confirm("¿Aplicar la definición actual solo a esta actividad? Los valores incompatibles se quitarán del borrador. La agenda publicada no cambia hasta publicar.")) return;
+                        const compatible = Object.fromEntries(
+                          Object.entries(active.customFields).filter(([key, value]) => {
+                            const field = currentType.fieldSchema.find((item) => item.key === key);
+                            if (!field) return false;
+                            let invalid = false;
+                            validateFields([field], { [key]: value }, () => { invalid = true; });
+                            return !invalid;
+                          }),
+                        );
+                        edit({ fieldSchema: currentType.fieldSchema, customFields: compatible });
+                      }}
+                    >
+                      Aplicar definición a esta actividad
+                    </Button>
+                  </div>
+                )}
               <details className="editor-choices">
                 <summary>Responsables ({active.responsibles.length})</summary>
                 {active.responsibles.map((r, index) => (
@@ -795,6 +847,22 @@ export function MeetingEditor({
                       </select>
                     </label>
                     <label className="field">
+                      Responsable de la actividad paralela
+                      <select
+                        value={s.personId ?? ""}
+                        onChange={(event) =>
+                          editSub(i, { personId: event.target.value || null })
+                        }
+                      >
+                        <option value="">Sin responsable</option>
+                        {catalog.people.map((person) => (
+                          <option key={person.id} value={person.id}>
+                            {person.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
                       Notas de la actividad paralela
                       <textarea
                         value={s.notes}
@@ -808,6 +876,13 @@ export function MeetingEditor({
                         }
                       />
                     </label>
+                    <CustomFields
+                      schema={s.fieldSchema}
+                      values={s.customFields}
+                      disabled={busy}
+                      onSchema={(fieldSchema) => editSub(i, { fieldSchema })}
+                      onValues={(customFields) => editSub(i, { customFields })}
+                    />
                     <Button
                       variant="ghost"
                       onClick={() =>
@@ -833,6 +908,7 @@ export function MeetingEditor({
                           clientKey: crypto.randomUUID(),
                           title: "Nueva actividad paralela",
                           teamId: null,
+                          personId: null,
                           offsetSeconds: 0,
                           durationSeconds: Math.min(60, active.durationSeconds),
                           notes: "",

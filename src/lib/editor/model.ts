@@ -36,7 +36,12 @@ export const fieldDefinition = z.object({
     .min(1, "Ingresá una etiqueta.")
     .max(100, "La etiqueta admite hasta 100 caracteres."),
   type: z.enum(["text", "number", "url", "date", "select", "checkbox"]),
-  options: z.array(z.string().max(100)).max(50).optional(),
+  options: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
+}).superRefine((field, ctx) => {
+  if (field.type === "select" && !field.options?.length)
+    ctx.addIssue({ code: "custom", message: "Agregá opciones para el campo de selección." });
+  if (field.options && new Set(field.options).size !== field.options.length)
+    ctx.addIssue({ code: "custom", message: "Las opciones no pueden repetirse." });
 });
 const fieldValues = z.record(
   z.string(),
@@ -53,6 +58,7 @@ export const subactivitySchema = z.object({
   clientKey: uuid,
   title: z.string().trim().min(1).max(200),
   teamId: uuid.nullable(),
+  personId: uuid.nullable().default(null),
   offsetSeconds: z.number().int().min(0).max(86400),
   durationSeconds: z.number().int().min(0).max(86400),
   notes: z.string().max(12000),
