@@ -3,9 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { serverClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
+  const redirectBase = process.env.APP_URL || request.url;
   if (!supabaseConfig())
     return NextResponse.redirect(
-      new URL("/ingresar?error=configuracion", request.url),
+      new URL("/ingresar?error=configuracion", redirectBase),
     );
   const hash = request.nextUrl.searchParams.get("token_hash");
   const type = request.nextUrl.searchParams.get("type");
@@ -22,9 +23,9 @@ export async function GET(request: NextRequest) {
           type === "invite" || type === "recovery"
             ? "/actualizar-clave"
             : "/inicio",
-          request.url,
+          redirectBase,
         ),
       );
   }
-  return NextResponse.redirect(new URL("/ingresar?error=enlace", request.url));
+  return NextResponse.redirect(new URL("/ingresar?error=enlace", redirectBase));
 }

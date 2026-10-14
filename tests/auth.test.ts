@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   recover: vi.fn(),
   update: vi.fn(),
   signout: vi.fn(),
+  verifyOtp: vi.fn(),
+  exchangeCode: vi.fn(),
   redirect: vi.fn((path: string) => {
     throw new Error(`redirect:${path}`);
   }),
@@ -23,6 +25,8 @@ vi.mock("@/lib/supabase/server", () => ({
       resetPasswordForEmail: mocks.recover,
       updateUser: mocks.update,
       signOut: mocks.signout,
+      verifyOtp: mocks.verifyOtp,
+      exchangeCodeForSession: mocks.exchangeCode,
     },
     from: mocks.from,
     rpc: mocks.rpc,
@@ -30,6 +34,9 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 import { accessContext, requireAccess, requireAdmin } from "@/lib/auth";
 import { authAction, requestAccess, signOut } from "@/app/auth/actions";
+import { GET as confirmEmail } from "@/app/auth/confirm/route";
+import { GET as callback } from "@/app/auth/callback/route";
+import { NextRequest } from "next/server";
 const form = (
   email = "ficticio@example.invalid",
   password = "clave-ficticia-segura",
@@ -56,6 +63,8 @@ beforeEach(() => {
     mocks.recover,
     mocks.update,
     mocks.signout,
+    mocks.verifyOtp,
+    mocks.exchangeCode,
   ])
     fn.mockResolvedValue({ error: null });
   mocks.from.mockImplementation((table: string) => {
@@ -71,6 +80,28 @@ beforeEach(() => {
     };
     return query;
   });
+});
+it("confirmación usa APP_URL canónica y no el host de la solicitud", async () => {
+  const request = new NextRequest(
+    "http://localhost:3105/auth/confirm?token_hash=fake-token&type=invite",
+  );
+  const response = await confirmEmail(request);
+  expect(response.headers.get("location")).toBe(
+    "https://chrono.example.invalid/actualizar-clave",
+  );
+  expect(mocks.verifyOtp).toHaveBeenCalledWith({
+    token_hash: "fake-token",
+    type: "invite",
+  });
+});
+it("callback PKCE usa APP_URL canónica", async () => {
+  const response = await callback(
+    new NextRequest("http://localhost:3105/auth/callback?code=fake-code"),
+  );
+  expect(response.headers.get("location")).toBe(
+    "https://chrono.example.invalid/inicio",
+  );
+  expect(mocks.exchangeCode).toHaveBeenCalledWith("fake-code");
 });
 it("acceso no configurado nunca consulta backend", async () => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
@@ -159,7 +190,7 @@ it("signup usa APP_URL fija y no otorga membresía", async () => {
   expect(mocks.signup).toHaveBeenCalledWith(
     expect.objectContaining({
       options: {
-        emailRedirectTo: "https://chrono.example.invalid/auth/callback",
+        emailRedirectTo: "https://chrono.example.invalid/auth/confirm",
         data: { display_name: "Persona ficticia" },
       },
     }),
@@ -186,7 +217,7 @@ it("recuperación tiene respuesta genérica y callback fijo", async () => {
     message: expect.stringContaining("Si existe"),
   });
   expect(mocks.recover).toHaveBeenCalledWith("ficticio@example.invalid", {
-    redirectTo: "https://chrono.example.invalid/actualizar-clave",
+    redirectTo: "https://chrono.example.invalid/auth/confirm",
   });
 });
 it("recuperación rechaza correo inválido", async () => {

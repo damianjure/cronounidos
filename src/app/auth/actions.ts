@@ -35,7 +35,7 @@ export async function authAction(
       return { message: "Ingresá un correo válido." };
     const c = await serverClient();
     const { error } = await c.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/actualizar-clave`,
+      redirectTo: `${origin}/auth/confirm`,
     });
     if (error)
       return { message: "No se pudo enviar el correo. Intentá nuevamente." };
@@ -55,7 +55,7 @@ export async function authAction(
       email,
       password,
       options: {
-        emailRedirectTo: `${origin}/auth/callback`,
+        emailRedirectTo: `${origin}/auth/confirm`,
         data: { display_name: displayName },
       },
     });
