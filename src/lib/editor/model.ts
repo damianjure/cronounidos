@@ -181,7 +181,7 @@ export type Catalog = {
   songs: CatalogItem[];
   announcements: CatalogItem[];
   messages: CatalogItem[];
-  resources: (CatalogItem & { url: string | null })[];
+  resources: (CatalogItem & { url: string | null; storagePath: string | null })[];
   meetingTypes: CatalogItem[];
   series: CatalogItem[];
 };

@@ -746,16 +746,20 @@ export function MeetingEditor({
               />
               {active.resourceIds.map((id) => {
                 const resource = catalog.resources.find((r) => r.id === id);
-                return resource?.url &&
-                  safeUrl.safeParse(resource.url).success ? (
+                const href = resource && resource.storagePath
+                  ? `/recursos/${resource.id}`
+                  : resource?.url && safeUrl.safeParse(resource.url).success
+                    ? resource.url
+                    : null;
+                return href ? (
                   <a
                     className="button button-ghost resource-link"
                     key={id}
-                    href={resource.url}
+                    href={href}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Abrir {resource.name}
+                    Abrir {resource?.name ?? "recurso"}
                   </a>
                 ) : null;
               })}

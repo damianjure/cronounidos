@@ -36,7 +36,7 @@ export async function loadCatalog(): Promise<Catalog> {
     ["songs", "id,title"],
     ["announcements", "id,title"],
     ["messages", "id,title"],
-    ["resources", "id,title,url"],
+    ["resources", "id,title,url,storage_path"],
     ["meeting_types", "id,name"],
     ["series", "id,title"],
   ] as const;
@@ -77,6 +77,7 @@ export async function loadCatalog(): Promise<Catalog> {
     resources: results[7].map((r, i) => ({
       ...resources[i],
       url: r.url as string | null,
+      storagePath: r.storage_path as string | null,
     })),
     meetingTypes: items(8),
     series: items(9),

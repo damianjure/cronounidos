@@ -12,6 +12,8 @@ import {
   fieldDefinition,
 } from "@/lib/editor/model";
 import { templateBlocks } from "@/lib/editor/templates";
+import { parseCatalogInput } from "@/lib/editor/catalog-input";
+import { hasResourceSignature } from "@/lib/editor/upload-validation";
 const fixture = () => ({
   meetingId: crypto.randomUUID(),
   version: 1,
@@ -70,6 +72,24 @@ it("plantilla separa IDs físicos y confirmaciones del origen", () => {
 it("campo de selección exige opciones útiles y únicas", () => {
   expect(fieldDefinition.safeParse({ key: "modo", label: "Modo", type: "select", options: [] }).success).toBe(false);
   expect(fieldDefinition.safeParse({ key: "modo", label: "Modo", type: "select", options: ["A", "A"] }).success).toBe(false);
+});
+it("catálogo de recursos rechaza enlaces inseguros", () => {
+  const form = new FormData();
+  form.set("title", "Placa ficticia");
+  form.set("resourceType", "image");
+  form.set("url", "http://example.invalid/placa.png");
+  expect(() => parseCatalogInput("resources", form)).toThrow();
+  form.set("url", "https://example.invalid/placa.png");
+  expect(parseCatalogInput("resources", form)).toMatchObject({
+    title: "Placa ficticia",
+    resource_type: "image",
+  });
+});
+it("subidas privadas validan firmas, no solo MIME declarado", () => {
+  expect(hasResourceSignature("image/png", new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]))).toBe(true);
+  expect(hasResourceSignature("image/png", new TextEncoder().encode("<script>alert(1)</script>"))).toBe(false);
+  expect(hasResourceSignature("image/webp", new TextEncoder().encode("RIFF1234WEBP"))).toBe(true);
+  expect(hasResourceSignature("application/pdf", new TextEncoder().encode("%PDF-1.7"))).toBe(true);
 });
 it("no permite actividades paralelas fuera de su padre", () => {
   const s = fixture();

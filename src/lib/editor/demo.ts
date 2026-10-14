@@ -41,6 +41,7 @@ export function demoEditor(): { snapshot: EditorSnapshot; catalog: Catalog } {
           id: id(8),
           name: "Enlace de ejemplo",
           url: "https://example.invalid",
+          storagePath: null,
         },
       ],
       meetingTypes: [],
