@@ -11,6 +11,8 @@ export default defineConfig({
       provider: "v8",
       include: [
         "src/lib/domain.ts",
+        "src/lib/editor/model.ts",
+        "src/lib/editor/transaction.ts",
         "src/lib/env.ts",
         "src/lib/auth.ts",
         "src/lib/auth-validation.ts",

@@ -250,24 +250,23 @@ describe("SQL real y RLS con auth.uid simulado (no servicio Auth)", () => {
         3,
         `update public.meeting_blocks set name='hack' where id='${block}'`,
       ),
-    ).rejects.toThrow(/immutable/);
+    ).rejects.toThrow(/immutable|permission denied/);
     await expect(
       asUser(
         3,
         `update public.block_details set notes='hack' where block_id='${block}'`,
       ),
-    ).rejects.toThrow(/immutable/);
+    ).rejects.toThrow(/immutable|permission denied/);
     await expect(
       db.exec(
         `insert into public.meeting_blocks(org_id,revision_id,sort_order,name,duration_seconds) values('${org}','${revision}',2,'Hack',2)`,
       ),
-    ).rejects.toThrow(/immutable/);
+    ).rejects.toThrow(/immutable|permission denied/);
   });
   it("edición de borrador no cambia agenda pública", async () => {
-    await asUser(
-      3,
+    await db.exec(
       `update public.meeting_blocks set name='Nuevo borrador' where id='${draftBlock}'`,
-    );
+    ); // Trusted fixture edit; authenticated writes use editor RPCs.
     expect(
       (await asUser(null, "select activity from public.public_agenda(null)"))
         .rows,
