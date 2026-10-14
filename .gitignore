@@ -7,3 +7,15 @@ node_modules/
 coverage/
 *.log
 .DS_Store
+
+*.tsbuildinfo
+playwright-report/
+test-results/
+supabase/.temp/
+
+.next-*/
+
+test-results-*/
+playwright-report-*/
+
+next-env.d.ts
