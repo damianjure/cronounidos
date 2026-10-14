@@ -37,11 +37,11 @@ Horarios cliente y PostgreSQL usan IANA; casos DST ambiguos/no existentes se res
 - Lint sin errores/warnings, typecheck strict y build de producción aprobados.
 - Audit de dependencias runtime: 0 vulnerabilidades; advisories dev de lint ya documentados en Sprints 0/1.
 - HTTP local del build: `/demo/editor`, `/`, `/cronograma`, manifest respondieron 200. HTML de demo contiene banner y timeline. Esto **no** valida hidratación, drag ni layout visual.
-- Playwright preparado: 28 casos desktop/mobile (18 base + 10 editor), incluyendo teclado, recálculo, rollback, duplicación, overflow y axe. **No aprobados**: Chrome no pudo iniciar.
+- Playwright preparado: 28 casos desktop/mobile (18 base + 10 editor), incluyendo teclado, recálculo, rollback, duplicación, overflow y axe. **Suite CLI no aprobada**: Chrome no pudo iniciar. Ver [validación posterior de Sprints 0/1](SPRINTS-0-1.md) para las comprobaciones que sí pasaron en el navegador integrado.
 
 ### Reintento Chrome
 
-Se reintentó un solo caso con Google Chrome instalado, un worker y `--max-failures=1`; terminó con `SIGABRT` antes de abrir la página. No se repitieron los 18 fallos idénticos. La alternativa de ventana normal falló: navegador `chrome` no disponible en Computer Use y Google Chrome sin aprobación de acceso. No se eludieron permisos ni se marcaron pruebas como verdes.
+En el primer intento se reintentó un solo caso con Google Chrome instalado, un worker y `--max-failures=1`; terminó con `SIGABRT` antes de abrir la página. En una sesión posterior se habilitó Chrome mediante Computer Use y el navegador Playwright integrado, y se verificaron flujos reales; el runner CLI siguió abortando incluso con Chrome for Testing nuevo. No se marcó la suite CLI como verde.
 
 Reporte de ese intento en `/tmp/chrono-retry-report`; no es un artefacto versionado/portátil. Para validar visualmente, habilitar un entorno de navegador permitido/CI y repetir las E2E. La demo puede probarse manualmente en Chrome con el servidor local.
 
@@ -52,7 +52,7 @@ Reporte de ese intento en `/tmp/chrono-retry-report`; no es un artefacto version
 - Responsables por subactividad y edición de sus campos personalizados; la capa de datos guarda schema/campos de paralelas pero la UI de esta etapa no los configura.
 - Subida a Supabase Storage y flujo de cancelación; recursos externos existentes sí se pueden seleccionar/abrir.
 - Permisos de edición parcial por equipo, preservando campos/relaciones que el usuario no pueda leer.
-- E2E/visual/PWA real y Auth/PostgREST contra Supabase completo. Docker sigue inactivo; no se aplicó ninguna migración remota.
+- Suite E2E CLI del editor y pruebas completas de Sprint 2. La validación de base PWA y Auth/PostgREST con Supabase local se hizo posteriormente (ver Sprints 0/1); no se aplicó ninguna migración remota.
 - Continuar Sprints 3–5: confirmaciones UI, reemplazos/conflictos, cobertura/calendario/matriz, modo vivo/Realtime y feedback +10 min.
 
 ## Configuración

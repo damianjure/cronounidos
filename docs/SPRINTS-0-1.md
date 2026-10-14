@@ -2,9 +2,9 @@
 
 ## Alcance y estado
 
-Se leyó `AGENTS.md` y toda la documentación aprobada antes de implementar. El repositorio original contenía solo documentación. Trabajo en `codex/sprints-0-1`; cambios locales, sin push ni despliegue remoto.
+Se leyó `AGENTS.md` y toda la documentación aprobada antes de implementar. El repositorio original contenía solo documentación. Los cambios están en ramas locales `codex/`; sin push ni despliegue remoto.
 
-**Implementación de Sprints 0/1 disponible; validación completa pendiente por E2E y servicios externos. No se declara terminado el MVP de seis sprints.** Las páginas de editor/calendario indican su sprint pendiente en lugar de presentar botones o datos ficticios como funcionalidades terminadas.
+**Sprints 0/1 implementados y validados localmente con navegador y Supabase real local.** El ejecutor CLI de Playwright sigue bloqueado en este host por `SIGABRT`; la validación funcional en el navegador integrado no equivale a una corrida verde del job de CI. No se declara terminado el MVP de seis sprints ni la configuración de producción. Las páginas de editor/calendario indican su sprint pendiente en lugar de presentar botones o datos ficticios como funcionalidades terminadas.
 
 ### Sprint 0
 
@@ -16,7 +16,7 @@ Se leyó `AGENTS.md` y toda la documentación aprobada antes de implementar. El 
 
 ### Sprint 1
 
-- Tres migraciones, 29 tablas de dominio con RLS y GRANT explícitos, UUIDs/org_id y claves foráneas compuestas para impedir cruces de organización.
+- Cuatro migraciones, 30 tablas públicas con RLS y GRANT explícitos, UUIDs/org_id y claves foráneas compuestas para impedir cruces de organización.
 - Organización, personas, usuarios/perfiles, membresías, equipos, roles, grants por acción/equipo; bibliotecas y vínculos normalizados de canciones, anuncios, mensajes y recursos.
 - Reuniones/revisiones, bloques, subactividades, puestos, asignaciones e historial append-only. Nota/campos privados en `block_details`, separados de columnas de horario.
 - Snapshot de horario y zona en la revisión; schema/version de tipo de bloque copiado a cada instancia. Cambiar un tipo no cambia las instancias existentes.
@@ -32,19 +32,28 @@ Se leyó `AGENTS.md` y toda la documentación aprobada antes de implementar. El 
 | --- | --- |
 | Lint | Pasó, sin errores ni warnings de código fuente |
 | Typecheck | Pasó con TypeScript strict |
-| Unit + Auth mockeado + SQL/RLS + PWA worker | 92 pruebas, 4 suites; pasando |
+| Unit + Auth mockeado + SQL/RLS + PWA worker + fundamentos del editor | 132 pruebas, 6 suites; pasando |
 | Cobertura de cinco módulos críticos (dominio, env, validaciones, autorización, acciones Auth) | 100% líneas/statements/funciones; 95.61% ramas; umbral 80% |
 | Build de producción | Pasó usando `NEXT_BUILD_DIR` aislado por restricciones de limpieza del host |
 | HTTP smoke de 8 rutas/manifiesto/ícono/worker | Respuestas 200 del servidor de producción local; no sustituye comprobación visual |
 | Auditoría dependencias runtime | `npm audit --omit=dev`: 0 vulnerabilidades |
 | Auditoría completa | 5 advisories high en cadena de lint (`eslint-config-next`/micromatch/braces); sin parche compatible en registro al verificar. No se aplicó downgrade mayor automático |
-| E2E desktop/mobile (18 casos) | Ejecutadas, **bloqueadas**: Chrome termina con SIGABRT antes de abrir página; ninguna aserción E2E aprobada |
-| UI visual/accesibilidad en navegador real | Pendiente: Playwright y el runtime de navegador integrado no pudieron iniciar en este host |
-| Supabase local completo/remoto | Pendiente: Docker inactivo; no se ejecutó contra servicios reales |
+| E2E desktop/mobile por CLI | Preparados 28 casos; el binario Chrome/Chromium de Playwright termina con `SIGABRT` antes de la primera aserción, incluso con navegador nuevo descargado y un worker. No se marca la suite como aprobada |
+| Navegador integrado (Playwright MCP) | Pasaron comprobaciones reales en desktop y móvil: navegación, overflow, tema, preview, PWA/offline/cache/logout, login/registro sin backend, rutas protegidas, foco y axe WCAG A/AA/2.1 AA sin violaciones en agenda pública |
+| Supabase local (Colima/Docker) | Cuatro migraciones aplicadas; Auth, correo local, PostgREST y DB probados con cuentas ficticias, aprobación, invitación, recuperación, suspensión, grants, RLS y aislamiento entre organizaciones |
 
-Cobertura **no significa 100% de toda la aplicación**: son los cinco módulos críticos configurados en Vitest. PostgreSQL/RLS se ejecuta realmente en PGlite con roles anon/authenticated y `auth.uid` simulado; Auth server, firmas JWT, PostgREST, Storage, Realtime y entrega de correo no son parte de esa prueba. Las pruebas Auth TS usan mocks de la SDK. Las pruebas de worker usan un entorno worker simulado; no sustituyen instalación PWA real.
+Cobertura **no significa 100% de toda la aplicación**: son los cinco módulos críticos configurados en Vitest. PostgreSQL/RLS se ejecuta en PGlite con roles anon/authenticated y `auth.uid` simulado; además se probaron flujos con el stack local de Supabase y JWT real. Storage y Realtime aún no tienen flujos funcionales del Sprint 0/1. Las pruebas Auth TS usan mocks de la SDK. Las pruebas de worker usan un entorno worker simulado; la comprobación PWA en navegador fue adicional, no una instalación en dispositivo real.
 
 La ejecución estándar de coverage en carpeta workspace generó métricas pero falló al limpiar `.tmp` por EPERM. La ejecución con `--coverage.reportsDirectory=/tmp/...` pasó y terminó exit 0. El primer build también pasó con `.next`; para repetición se usaron carpetas nuevas soportadas por `NEXT_BUILD_DIR`. No se ocultaron errores con skips.
+
+### Evidencia de integración local (14/10/2026)
+
+- Colima/Docker y Supabase local iniciaron; se excluyó el contenedor opcional `vector` porque su bind mount del socket de Docker falló en Colima. El resto de los servicios necesarios quedó saludable. Sin `db reset` destructivo.
+- Registro desde la UI, mensaje en Mailpit y verificación de correo con enlace nuevo; antes de aprobación, la sesión solo accedió a `/pendiente` y la ruta administrativa redirigió.
+- Bootstrap confiable del primer administrador según `SETUP.md`; aprobación de integrante con rol de responsable de Media desde la UI. El responsable no accedió a administración y vio solo una persona de su equipo. En PostgREST, `anon` recibió 401.
+- Con el **mismo JWT** de un miembro, suspender su membresía redujo las personas visibles de una a cero inmediatamente; se restauró el estado de prueba. Una segunda organización/persona ficticia temporal no se filtró a la primera; se eliminó el fixture.
+- Invitación desde la UI creó un acceso pendiente y Mailpit recibió el correo. Recuperación desde la UI mostró la respuesta neutra y Mailpit recibió el correo. Suspensión y reaprobación desde la UI también funcionaron. No se verificó aún el consumo completo de los enlaces de invitación/recuperación ni renovación de sesión.
+- En navegador real se corrigió la asociación accesible del campo Contraseña, detectada al correr el flujo de login. Luego pasaron el flujo y axe sin violaciones.
 
 ## Casos de seguridad cubiertos
 
@@ -61,11 +70,11 @@ La ejecución estándar de coverage en carpeta workspace generó métricas pero 
 
 ## Configuración pendiente y próximos sprints
 
-Checklist operativa completa en `SETUP.md`: confirmar **nuevo** Supabase/project ref, aplicar migraciones allí, crear organización/primer admin por bootstrap confiable, variables, SMTP/templates/redirects, protección antiabuso, CI E2E y Vercel/HTTPS.
+Checklist operativa completa en `SETUP.md`: confirmar **nuevo** Supabase/project ref, aplicar migraciones allí, crear organización/primer admin por bootstrap confiable, variables, SMTP/templates/redirects, protección antiabuso, CI E2E y Vercel/HTTPS. La prueba local no aplica migraciones ni datos a remoto.
 
 No implementados aún: CRUD/editor de reuniones y directorio completo, duplicación/presets UI, drag táctil, calendario/matriz, confirmaciones UI/concurrencia del editor, solapamientos/excepciones UI, ejecución en vivo/Realtime, Storage upload, cierre y feedback +10 min/scheduler/email. Los tests actuales de cálculo/cobertura/reset son fundamentos de dominio, no una simulación de esos flujos completos.
 
-**No tocar** Supabase de otros proyectos. No se añadieron WhatsApp, Google OAuth, ProPresenter ni FastAPI. El bloqueo de verificación E2E/servicios debe resolverse antes de declarar los sprints completamente aceptados y antes de producción.
+**No tocar** Supabase de otros proyectos. No se añadieron WhatsApp, Google OAuth, ProPresenter ni FastAPI. El bloqueo del runner E2E, la prueba de enlaces email completos, dispositivos reales y la configuración de producción siguen pendientes; no se deben presentar como verificados.
 
 ## Archivos relevantes
 
@@ -73,4 +82,4 @@ No implementados aún: CRUD/editor de reuniones y directorio completo, duplicaci
 - `src/lib/auth.ts`, `src/proxy.ts`, `src/lib/supabase/`: separación de identidades y guards.
 - `supabase/migrations/`: esquema, RLS, ACLs de funciones, inmutabilidad, snapshots y RPCs administrativas.
 - `tests/`: suite repetible y alcance de mocks explícito.
-- `playwright.config.ts`, `.github/workflows/ci.yml`: verificación E2E preparada, aún no aprobada.
+- `playwright.config.ts`, `.github/workflows/ci.yml`: verificación E2E preparada, runner local aún no aprobado.

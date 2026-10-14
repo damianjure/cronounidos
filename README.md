@@ -29,7 +29,7 @@ npx playwright install --with-deps chromium
 npm run test:e2e
 ```
 
-Las E2E usan el build de producción sin backend configurado. La suite SQL/RLS usa PostgreSQL embebido (PGlite), con `auth.uid()` simulado, y no requiere Docker. **No sustituye** probar Auth/PostgREST/Storage/Realtime en Supabase real. Ver la guía de validación y el bloqueo de Chrome de este host en el informe.
+Las E2E usan el build de producción sin backend configurado. La suite SQL/RLS usa PostgreSQL embebido (PGlite), con `auth.uid()` simulado, y no requiere Docker. Además se probaron Auth y PostgREST contra Supabase local con Colima y cuentas ficticias. Chrome del ejecutor CLI todavía aborta en este host; el navegador integrado permitió verificar los flujos base. Ver [el informe](docs/SPRINTS-0-1.md) para el alcance exacto y lo pendiente.
 
 ## Organización
 

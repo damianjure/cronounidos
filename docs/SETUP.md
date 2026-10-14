@@ -6,7 +6,7 @@ La app de Sprints 0/1 y el primer tramo de Sprint 2 están implementados (ver SP
 
 ## 1. Entorno local
 
-Node.js 24 LTS, npm y Supabase CLI. Se verificó con CLI 2.101.0. Docker debe estar iniciado para usar el stack completo de Supabase; en este host estaba inactivo.
+Node.js 24 LTS, npm y Supabase CLI. Se verificó con CLI 2.101.0. Docker debe estar iniciado para usar el stack completo de Supabase. En este host Colima ya funciona; `supabase start` completo chocó con el bind mount del socket Docker del servicio opcional `vector`, pero `supabase start --exclude vector` levantó el resto de servicios necesarios. No usar `db reset` en el entorno local ya probado si se desea conservar sus cuentas ficticias.
 
 ```sh
 npm ci
@@ -90,10 +90,9 @@ No se hizo deploy ni se publicó una preview en esta entrega. Cualquier dominio 
 
 ## 6. Verificación que falta sobre servicios reales
 
-- Supabase completo: Auth/confirmación/invitación/reset, cookies SSR y renovación, PostgREST/RLS, esquema privado no expuesto.
-- Aprobación, suspensión y ACL por equipo usando cuentas de prueba reales; navegación autenticada y logout entre dos usuarios.
-- Playwright en un runner donde Chrome pueda arrancar; el host actual aborta con `SIGABRT` antes de las aserciones.
-- Instalación PWA en dispositivos reales iOS/Android, modo standalone, teclado y lectores de pantalla; no se verificó visualmente en este host.
+- Supabase remoto independiente: migraciones, advisors, Auth/SMTP, redirecciones, recuperación/invitación completas, cookies SSR y renovación, PostgREST/RLS y comprobación de que `private` no se exponga. Localmente se probaron registro y confirmación, cuentas pendientes/aprobadas, invitación y entrega de correo, recuperación y entrega de correo, PostgREST/JWT/RLS, aprobación y suspensión por UI, ACL por equipo y aislamiento de dos organizaciones.
+- Playwright CLI/CI en un runner donde Chrome pueda arrancar; en este host Chrome instalado y Chrome for Testing abortan con `SIGABRT` antes de las aserciones. El navegador integrado sí permitió comprobaciones funcionales desktop/mobile, PWA, axe y Auth local, pero no reemplaza la corrida de CI.
+- Instalación PWA en dispositivos reales iOS/Android, modo standalone y lectores de pantalla; el navegador integrado verificó manifest, worker, offline y teclado, pero no dispositivos reales.
 - Email y bootstrap; deploy/preview Vercel, advisors, observabilidad. No afirmar listo para producción hasta completar esas comprobaciones.
 
 ### Restricciones de artefactos de este host
@@ -106,7 +105,7 @@ NEXT_BUILD_DIR=.next-validation-NUEVO npm run build
 NEXT_BUILD_DIR=.next-validation-NUEVO npm run start
 ```
 
-Cambiar `NUEVO` por un identificador nuevo en cada ejecución. Playwright admite `E2E_OUTPUT_DIR`, `E2E_REPORT_DIR` y, si corresponde, `PLAYWRIGHT_CHROMIUM_EXECUTABLE`. Esas opciones solo resuelven la ubicación de artefactos: **no** resuelven el aborto de Chrome. Los reportes/builds están ignorados por Git. En un checkout limpio de CI usar las rutas predeterminadas.
+Cambiar `NUEVO` por un identificador nuevo en cada ejecución. Playwright admite `E2E_PORT` (3100 por defecto), `E2E_OUTPUT_DIR`, `E2E_REPORT_DIR` y, si corresponde, `PLAYWRIGHT_CHROMIUM_EXECUTABLE`. Estas opciones facilitan probar un servidor de producción ya iniciado en otro puerto y ubicar artefactos: **no** resuelven el aborto de Chrome. Los reportes/builds están ignorados por Git. En un checkout limpio de CI usar las rutas predeterminadas.
 
 ## Referencias técnicas verificadas
 
