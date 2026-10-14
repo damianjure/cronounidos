@@ -11,6 +11,9 @@ export function SetupNotice() {
       <Link href="/configuracion" className="button button-ghost">
         Ver configuración pendiente
       </Link>
+      <Link href="/demo/editor" className="button button-ghost">
+        Probar editor con datos ficticios
+      </Link>
     </div>
   );
 }
