@@ -34,7 +34,7 @@ export default async function Pending({
           Identificador de la organización
           <input
             name="slug"
-            defaultValue="unidos-demo"
+            defaultValue="unidos"
             required
             pattern="[a-z0-9-]{2,60}"
             maxLength={60}

@@ -2,7 +2,7 @@
 
 ## Estado actual
 
-La app de Sprints 0/1 y un tramo avanzado de Sprint 2 están implementados (ver SPRINT-2.md). El usuario confirmó y creó un proyecto Supabase **independiente**, `Crono Unidos` (`ivmhgizuofxdvvvzdxnl`, São Paulo), el 15/10/2026. Se aplicaron allí las ocho migraciones versionadas, **sin seed ni usuarios reales**. Todavía faltan organización real, Auth/SMTP, primer administrador, Vercel y los sprints restantes; no está lista para público. No usar **caja-chica**, **docu-media-us** ni ningún proyecto ajeno.
+La app de Sprints 0/1 y un tramo avanzado de Sprint 2 están implementados (ver SPRINT-2.md). El usuario confirmó y creó un proyecto Supabase **independiente**, `Crono Unidos` (`ivmhgizuofxdvvvzdxnl`, São Paulo), el 15/10/2026. Se aplicaron allí las ocho migraciones versionadas, **sin seed ni usuarios reales**. Se creó únicamente la organización real `Unidos para Servir` (`unidos`). Todavía faltan Auth/SMTP, primer administrador, Vercel y los sprints restantes; no está lista para público. No usar **caja-chica**, **docu-media-us** ni ningún proyecto ajeno.
 
 ## 1. Entorno local
 
@@ -35,8 +35,8 @@ Nunca poner secret/service-role keys en `NEXT_PUBLIC_*`, GitHub, logs o formular
 
 1. **Hecho:** proyecto nuevo `Crono Unidos`, ref `ivmhgizuofxdvvvzdxnl`, organización Supabase `damianjure`, región `sa-east-1`. El checkout local está vinculado solo a ese ref; comprobar `supabase/.temp/project-ref` antes de cualquier `--linked`.
 2. **Hecho:** ocho migraciones en `supabase/migrations/`, aplicadas con `supabase db push --linked` y verificadas en `supabase_migrations.schema_migrations`. La sexta crea `crono-resources` privado, PNG/JPEG/WebP/PDF hasta 5 MB; la séptima agrega cancelación; la octava revoca `EXECUTE` público del activador opcional `public.rls_auto_enable()`. No usar `--include-seed` en remoto.
-3. **Verificado:** 30/30 tablas `public` con RLS; bucket privado; cero organizaciones (no se cargó la seed). `anon` y `authenticated` no pueden ejecutar `rls_auto_enable()`. El advisor aún marca deliberadamente `public_agenda` para `anon` y RPCs autorizadas `SECURITY DEFINER` para usuarios autenticados: cada función debe mantener comprobaciones internas de identidad/permiso y GRANT explícito. [Aviso de Supabase](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable).
-4. **Pendiente:** crear solo la organización real confirmada por el usuario y el primer administrador; configurar Auth y probar API con identidades de prueba (`anon`, pendiente y miembros de dos organizaciones), sin datos personales de la comunidad todavía. Exponer solo `public` en Data API; `private` **no** debe estar expuesto. Generar tipos al preparar las siguientes funcionalidades.
+3. **Verificado:** 30/30 tablas `public` con RLS; bucket privado; una organización `Unidos para Servir` con slug `unidos` y zona horaria `America/Argentina/Buenos_Aires`. No se cargó la seed: `people`, `teams`, `memberships`, `auth.users` y `permission_grants` permanecen vacías. `anon` y `authenticated` no pueden ejecutar `rls_auto_enable()`. El advisor aún marca deliberadamente `public_agenda` para `anon` y RPCs autorizadas `SECURITY DEFINER` para usuarios autenticados: cada función debe mantener comprobaciones internas de identidad/permiso y GRANT explícito. [Aviso de Supabase](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable).
+4. **Pendiente:** crear/verificar la cuenta Auth del primer administrador y habilitarla mediante bootstrap confiable; configurar Auth y probar API con identidades de prueba (`anon`, pendiente y miembros de dos organizaciones), sin datos personales de la comunidad todavía. Exponer solo `public` en Data API; `private` **no** debe estar expuesto. Generar tipos al preparar las siguientes funcionalidades.
 5. **Rendimiento:** advisor remoto informa 9 advertencias `auth_rls_initplan` y avisos informativos de índices. Revisarlos antes del lanzamiento público, priorizando consultas reales; no crear indiscriminadamente índices para todas las FKs.
 
 ## 3. Auth email
@@ -55,13 +55,13 @@ Nunca poner secret/service-role keys en `NEXT_PUBLIC_*`, GitHub, logs o formular
 
 Cada fragmento corresponde a su propia plantilla. Invitación/recuperación verifican OTP en servidor y luego abren `/actualizar-clave`. `/auth/callback` también admite el intercambio PKCE de `code` de la SDK. No pasar destinos arbitrarios por query string. Al cambiar las plantillas locales, reiniciar con `supabase stop` (sin `--no-backup`) y `supabase start --exclude vector` si Colima no admite el bind mount de ese servicio opcional.
 
-Flujo: registrarse → verificar correo → ingresar → solicitar acceso con el slug de organización → administrador aprueba. Hasta entonces, `/inicio`, `/personas`, `/administracion`, `/cronograma` y `/calendario` no entregan datos internos. Las altas/invitaciones desde administración también quedan pendientes. Las contraseñas creadas por admin no tienen caducidad forzada implementada: preferir invitación por email; si se usa alta directa, entregar la clave por canal seguro y pedir cambio inmediato.
+Flujo: registrarse → verificar correo → ingresar → solicitar acceso con el slug `unidos` → administrador aprueba. Hasta entonces, `/inicio`, `/personas`, `/administracion`, `/cronograma` y `/calendario` no entregan datos internos. Las altas/invitaciones desde administración también quedan pendientes. Las contraseñas creadas por admin no tienen caducidad forzada implementada: preferir invitación por email; si se usa alta directa, entregar la clave por canal seguro y pedir cambio inmediato.
 
 ## 4. Primer administrador (bootstrap confiable)
 
 No hay endpoint público ni autoasignación de administrador. El primer administrador debe habilitarse mediante una operación confiable en la **base nueva confirmada**, después de crear/verificar su cuenta Auth.
 
-Crear primero una organización real con su slug. Usar UUIDs reales solo en el SQL Editor seguro del proyecto confirmado, no en commits. Ejemplo **con placeholders que deben reemplazarse**:
+La organización real `unidos` ya existe. Usar UUIDs reales solo en el SQL Editor seguro del proyecto confirmado, no en commits. Ejemplo **con placeholders que deben reemplazarse**:
 
 ```sql
 begin;
