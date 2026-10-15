@@ -170,3 +170,39 @@ test("reunión: crea borrador y cancela conservando historial", async ({ page },
   await expect(page).toHaveURL(/\/cronograma\?cancelled=1$/);
   await expect(page.locator("li").filter({ has: page.getByRole("heading", { name: title }) })).toContainText("Cancelada");
 });
+
+test("edición parcial: notas de equipo no exponen otros bloques", async ({ page }, info) => {
+  await login(page);
+  const suffix = `${info.project.name}-${Date.now()}`;
+  const teamName = `Equipo notas ${suffix}`;
+  await page.goto("/personas");
+  const addTeam = page.locator("details").filter({ has: page.locator("summary", { hasText: "Agregar equipo" }) });
+  await addTeam.locator("summary").click();
+  await addTeam.locator('input[name="name"]').fill(teamName);
+  await addTeam.getByRole("button", { name: "Agregar" }).click();
+  await expect(page.getByRole("heading", { name: teamName })).toBeVisible();
+
+  await page.goto("/cronograma/nueva");
+  await page.locator('input[name="title"]').fill(`Reunión notas ${suffix}`);
+  await page.locator('input[name="date"]').fill("2026-11-18");
+  await page.getByRole("button", { name: "Crear borrador" }).click();
+  await expect(page).toHaveURL(/\/cronograma\/[0-9a-f-]{36}$/);
+  const meetingId = page.url().split("/").pop();
+  await page.getByRole("button", { name: "Agregar actividad" }).click();
+  await page.getByRole("combobox", { name: "Equipo principal" }).selectOption({ label: teamName });
+  const teamId = await page.getByRole("combobox", { name: "Equipo principal" }).inputValue();
+  await page.getByRole("textbox", { name: "Notas privadas" }).fill("Nota de mi equipo");
+  await page.getByRole("button", { name: "Agregar actividad" }).click();
+  await page.getByRole("textbox", { name: "Notas privadas" }).fill("Nota oculta de otro bloque");
+  await page.getByRole("button", { name: "Guardar borrador" }).click();
+  await expect(page.locator("p.notice[role=status]")).toContainText("Borrador guardado");
+
+  await page.goto(`/cronograma/${meetingId}/equipos/${teamId}`);
+  await expect(page.getByRole("heading", { name: "Notas de tu equipo" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Nota interna" })).toHaveValue("Nota de mi equipo");
+  await expect(page.getByText("Nota oculta de otro bloque")).toHaveCount(0);
+  await page.getByRole("textbox", { name: "Nota interna" }).fill("Nota editada de mi equipo");
+  await page.getByRole("button", { name: "Guardar nota" }).click();
+  await expect(page.getByRole("status")).toContainText("Nota guardada en borrador");
+  await expect(page.getByRole("textbox", { name: "Nota interna" })).toHaveValue("Nota editada de mi equipo");
+});

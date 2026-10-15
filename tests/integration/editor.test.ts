@@ -465,6 +465,45 @@ it("reemplazar o eliminar archivo privado encola limpieza y protege referencias"
     .toEqual([{ path: nextPath }]);
   expect((await db.query("select id from public.resources where id=$1", [resource])).rows).toEqual([]);
 });
+it("editor parcial de equipo modifica solo su nota y preserva el borrador oculto", async () => {
+  const own = emptyBlock("Media ficticia");
+  own.teamId = id(201);
+  own.notes = "Nota inicial de Media";
+  const hidden = emptyBlock("Otro equipo ficticio");
+  hidden.teamId = id(202);
+  hidden.notes = "Nota privada de otro equipo";
+  hidden.songIds = [id(601)];
+  let meeting = snapshotSchema.parse(await rpc(admin, "create_editor_meeting", [org, metadata, null]));
+  meeting = snapshotSchema.parse(await rpc(admin, "publish_editor_snapshot", [
+    meeting.meetingId, meeting.version, meeting.metadata, [own, hidden],
+  ]));
+  const publishedRevision = meeting.publishedRevisionId;
+  await expect(rpc(member, "get_team_block_notes", [meeting.meetingId, id(201)])).rejects.toThrow(/Forbidden/);
+  await db.query(
+    "insert into public.permission_grants(org_id,subject_user_id,team_id,permission) values($1,$2,$3,'plan'),($1,$2,$3,'read_content')",
+    [org, member, id(201)],
+  );
+  await expect(rpc(member, "get_editor_snapshot", [meeting.meetingId])).rejects.toThrow(/Forbidden/);
+  expect((await actor(member, "select id from public.team_note_editor_teams($1)", [org])).rows)
+    .toEqual([{ id: id(201) }]);
+  const visible = await rpc(member, "get_team_block_notes", [meeting.meetingId, id(201)]) as { version: number; blocks: { id: string; name: string; notes: string }[] };
+  expect(visible.blocks).toEqual([{ id: meeting.blocks[0].id, name: "Media ficticia", notes: "Nota inicial de Media" }]);
+  expect(JSON.stringify(visible)).not.toContain("Nota privada de otro equipo");
+  expect(JSON.stringify(visible)).not.toContain(id(601));
+  await expect(rpc(member, "get_team_block_notes", [meeting.meetingId, id(202)])).rejects.toThrow(/Forbidden/);
+  await expect(rpc(member, "save_team_block_notes", [meeting.meetingId, id(201), meeting.blocks[1].id, visible.version, "Intrusión"]))
+    .rejects.toThrow(/Forbidden/);
+  const saved = await rpc(member, "save_team_block_notes", [meeting.meetingId, id(201), meeting.blocks[0].id, visible.version, "Nueva nota de Media"]) as { version: number; blocks: { notes: string }[] };
+  expect(saved.blocks[0].notes).toBe("Nueva nota de Media");
+  await expect(rpc(member, "save_team_block_notes", [meeting.meetingId, id(201), meeting.blocks[0].id, visible.version, "Stale"]))
+    .rejects.toThrow(/Version conflict/);
+  const full = snapshotSchema.parse(await rpc(admin, "get_editor_snapshot", [meeting.meetingId]));
+  expect(full.publishedRevisionId).toBe(publishedRevision);
+  expect(full.revisionId).not.toBe(publishedRevision);
+  expect(full.blocks[1].notes).toBe("Nota privada de otro equipo");
+  expect(full.blocks[1].songIds).toEqual([id(601)]);
+  expect(full.blocks[0].notes).toBe("Nueva nota de Media");
+});
 it("puestos duplicados reinician confirmado y conservan historial del origen", async () => {
   const pos = id(960);
   const originalAssignment = id(961);

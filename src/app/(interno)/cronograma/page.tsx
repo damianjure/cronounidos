@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { z } from "zod";
 import { requireAccess } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { CancelMeetingForm } from "@/components/editor/cancel-meeting-form";
@@ -6,7 +7,7 @@ export default async function Schedule({ searchParams }: { searchParams: Promise
   const a = await requireAccess();
   if (a.state !== "approved") return null;
   const params = await searchParams;
-  const [rows, permission] = await Promise.all([
+  const [rows, permission, noteTeams] = await Promise.all([
     a.client
       .from("meetings")
       .select("id,title,date,status,version,draft_revision_id,published_revision_id")
@@ -14,9 +15,11 @@ export default async function Schedule({ searchParams }: { searchParams: Promise
       .order("date")
       .limit(100),
     a.client.rpc("can_edit_meetings", { p_org: a.orgId }),
+    a.client.rpc("team_note_editor_teams", { p_org: a.orgId }),
   ]);
-  if (rows.error || permission.error)
+  if (rows.error || permission.error || noteTeams.error)
     throw new Error("No se pudo consultar el cronograma.");
+  const editableTeams = z.array(z.object({ id: z.uuid(), name: z.string() })).parse(noteTeams.data ?? []);
   return (
     <>
       <div className="page-heading">
@@ -58,6 +61,11 @@ export default async function Schedule({ searchParams }: { searchParams: Promise
                   {permission.data ? "Abrir editor" : "Ver agenda pública"}
                 </Link>
               </Button>}
+              {!permission.data && m.status !== "cancelled" && m.status !== "finished" && editableTeams.map((team) => (
+                <Button asChild variant="outline" key={team.id}>
+                  <Link href={`/cronograma/${m.id}/equipos/${team.id}`}>Notas de {team.name}</Link>
+                </Button>
+              ))}
               {permission.data && m.status !== "cancelled" && m.status !== "finished" && <CancelMeetingForm id={m.id} version={m.version} />}
             </li>
           ))}
