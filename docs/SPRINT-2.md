@@ -63,7 +63,7 @@ Los reportes de este turno quedaron en `/tmp/chrono-sprint2-e2e-report-chrome3` 
 
 Se agregó alta, edición, desactivación y eliminación explícita (solo si no está en uso) de personas, equipos y roles, además de alta/baja de integrantes por equipo, desde `/personas`. Los formularios respetan grants globales o de equipo; cada Server Action vuelve a comprobar autorización y RLS sigue siendo la barrera final. No se agregaron columnas ni migraciones. Los nombres se validan y los UUID de equipos/personas no se aceptan sin formato válido. La eliminación requiere abrir una sección de confirmación; desactivar conserva las referencias históricas.
 
-Lint, typecheck, 144 pruebas (7 suites) y build pasaron. Las pruebas SQL nuevas cubren admin, responsable acotado a Media, pendiente y aislamiento de organización. Las 28 E2E existentes en Chrome desktop/mobile pasaron, pero **no cubren aún el CRUD autenticado del directorio**; queda por validar visualmente y probar operaciones reales de ese flujo en Preview. La organización remota sigue sin seed ni personas reales.
+Lint, typecheck, 144 pruebas (7 suites) y build pasaron. Las pruebas SQL nuevas cubren admin, responsable acotado a Media, pendiente y aislamiento de organización. Las 28 E2E existentes en Chrome desktop/mobile pasaron, pero **no cubren aún el CRUD autenticado del directorio**. El commit `20a1d76` quedó en Preview Vercel `Ready` y Chrome mostró `/personas` con la sesión administradora y los formularios de alta, sin personas/equipos remotos. No se ejecutaron escrituras de prueba en la base remota. La organización remota sigue sin seed ni personas reales.
 
 ## Configuración
 

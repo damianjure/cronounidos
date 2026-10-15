@@ -99,6 +99,8 @@ Convención de nombres aprobada: nombre visible de la app y del proyecto Supabas
 
 **Invitación recibida; pendiente de acceso:** el propietario confirmó la recepción del correo de invitación. Auth remoto muestra el correo del alias confirmado, pero su perfil sigue sin aprobar, la membresía continúa `pending` y tiene **cero grants**. No se aprobó al alias. La sesión observada en Chrome seguía siendo la del administrador, por lo que **no** se ha demostrado en navegador que el alias ingrese, cambie/establezca contraseña o quede restringido a `/pendiente`; hacerlo en una sesión separada. Probar también cookies SSR/renovación y recuperación remota. Revisar si Brevo registró la entrega del correo de confirmación. Configurar Production por separado cuando el MVP y las pruebas remotas estén listos, con remitente dedicado. También falta confirmar dominio final. Build: `npm run build`; preset Next.js, Node 24. Se recomienda mantener el repositorio privado. La CLI local de Vercel sigue sin sesión; usar el dashboard o autenticar la CLI antes de ejecutar comandos `vercel`. El conector Vercel de esta sesión respondió 403 para el scope; se verificaron la variable y el despliegue en Chrome en su lugar.
 
+**Actualización posterior (15/10/2026):** al verificar el directorio nuevo, la UI de administración y una consulta de solo lectura mostraron que el alias de prueba pasó a membresía/perfil `approved` y tiene un grant. Ese cambio **no lo hizo Codex en esta continuación** y no se probó el inicio de sesión del alias; ya no sirve para demostrar el estado pendiente sin crear otra cuenta de prueba. Por pedido del propietario, se posponen las pruebas de invitación y no se envía otra.
+
 No se hizo lanzamiento a Production. Cualquier dominio como `app.unidosparaservir.org` debe confirmarse por el usuario. El bucket privado Storage está versionado, probado localmente y creado remoto; el flujo de subida/descarga remoto aún no fue probado con usuarios reales. Realtime, scheduler de feedback y proveedor de correo de feedback corresponden a Sprints 4–5. No se simulan como servicios disponibles.
 
 ## 6. Verificación que falta sobre servicios reales
@@ -107,6 +109,7 @@ No se hizo lanzamiento a Production. Cualquier dominio como `app.unidosparaservi
 - Playwright CLI pasó **28/28** casos desktop/mobile con el Chrome instalado en este host usando `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`. Falta repetir en CI y automatizar E2E autenticadas de catálogos/Storage/cancelación; el navegador integrado sí verificó esos flujos localmente.
 - Instalación PWA en dispositivos reales iOS/Android, modo standalone y lectores de pantalla; el navegador integrado verificó manifest, worker, offline y teclado, pero no dispositivos reales.
 - Operaciones de administración con escritura y otros flujos Auth/RLS/Storage reales en la Preview, despliegue Production, advisors y observabilidad. No afirmar listo para producción hasta completar esas comprobaciones.
+- El directorio de personas/equipos/roles del Sprint 2 quedó desplegado en Preview desde `20a1d76` (`Ready`); Chrome mostró los formularios de administración en `/personas` con la organización aún vacía. Faltan operaciones de escritura E2E autenticadas de ese flujo; no se cargaron datos de prueba en Supabase remoto.
 
 ### Restricciones de artefactos de este host
 
