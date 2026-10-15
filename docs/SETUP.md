@@ -2,7 +2,7 @@
 
 ## Estado actual
 
-La app de Sprints 0/1 y un tramo avanzado de Sprint 2 están implementados (ver SPRINT-2.md). El usuario confirmó y creó un proyecto Supabase **independiente**, `Crono Unidos` (`ivmhgizuofxdvvvzdxnl`, São Paulo), el 15/10/2026. Se aplicaron allí las ocho migraciones versionadas, **sin seed ni usuarios reales**. Se creó únicamente la organización real `Unidos para Servir` (`unidos`). Todavía faltan Auth/SMTP, primer administrador, Vercel y los sprints restantes; no está lista para público. No usar **caja-chica**, **docu-media-us** ni ningún proyecto ajeno.
+La app de Sprints 0/1 y un tramo avanzado de Sprint 2 están implementados (ver SPRINT-2.md). El usuario confirmó y creó un proyecto Supabase **independiente**, `Crono Unidos` (`ivmhgizuofxdvvvzdxnl`, São Paulo), el 15/10/2026. Se aplicaron allí las ocho migraciones versionadas, **sin seed ni usuarios reales**. Se creó únicamente la organización real `Unidos para Servir` (`unidos`). También existe el proyecto Vercel independiente `crono-unidos`, todavía vacío. Faltan Auth/SMTP, primer administrador, conexión Git/Vercel, despliegue y los sprints restantes; no está lista para público. No usar **caja-chica**, **docu-media-us** ni ningún proyecto ajeno.
 
 ## 1. Entorno local
 
@@ -83,9 +83,11 @@ En desarrollo local se puede usar el org UUID ficticio de `seed.sql`, pero **no*
 
 ## 5. Vercel
 
-Convención de nombres aprobada: nombre visible de la app y del proyecto Supabase **Crono Unidos**; proyecto Vercel nuevo **`crono-unidos`** (si está disponible, porque Vercel usa identificadores tipo slug). La organización de datos dentro de Supabase es **Unidos para Servir** (`unidos`), no otro proyecto de infraestructura. El repositorio existente sigue siendo [`damianjure/cronounidos`](https://github.com/damianjure/cronounidos); no renombrarlo solo para uniformar. Cada recurso debe pertenecer al proyecto nuevo, sin reutilizar proyectos, variables de entorno ni bases de datos de otras aplicaciones.
+Convención de nombres aprobada: nombre visible de la app y del proyecto Supabase **Crono Unidos**; proyecto Vercel **`crono-unidos`** (Vercel usa identificadores tipo slug). La organización de datos dentro de Supabase es **Unidos para Servir** (`unidos`), no otro proyecto de infraestructura. El repositorio existente sigue siendo [`damianjure/cronounidos`](https://github.com/damianjure/cronounidos); no renombrarlo solo para uniformar. Cada recurso debe pertenecer al proyecto nuevo, sin reutilizar proyectos, variables de entorno ni bases de datos de otras aplicaciones.
 
-Pendiente crear y vincular ese proyecto Vercel a este GitHub, configurar el entorno (Preview y Production separados), HTTPS y dominio. Build: `npm run build`; Next.js detectado automáticamente. Node 24. Se recomienda mantener el repositorio privado. El conector Vercel pudo listar proyectos existentes, pero la consulta explícita al scope de esos proyectos devolvió `403 forbidden`; la CLI no tiene sesión iniciada y Chrome muestra la pantalla de login. No crear el proyecto en un scope predeterminado hasta confirmar acceso al correcto.
+**Creado:** proyecto Vercel independiente [`crono-unidos`](https://vercel.com/damianjure-5692s-projects/crono-unidos) (`prj_htQ8u4QUEnC4C0eAYHvkqA92f574`) en el equipo Hobby `damianjure-5692s-projects`, verificado por dashboard y listado del conector. Es un proyecto vacío: sin repositorio conectado, variables de entorno ni despliegues. No se modificaron los otros proyectos del equipo.
+
+**Pendiente:** vincular exclusivamente este proyecto a GitHub, configurar el entorno (Preview y Production separados), HTTPS y dominio. Build: `npm run build`; Next.js detectado automáticamente. Node 24. Se recomienda mantener el repositorio privado. La CLI local de Vercel sigue sin sesión; usar el dashboard o autenticar la CLI antes de ejecutar comandos `vercel`.
 
 No se hizo deploy ni se publicó una preview en esta entrega. Cualquier dominio como `app.unidosparaservir.org` debe confirmarse por el usuario. El bucket privado Storage está versionado, probado localmente y creado remoto; el flujo de subida/descarga remoto aún no fue probado con usuarios reales. Realtime, scheduler de feedback y proveedor de correo de feedback corresponden a Sprints 4–5. No se simulan como servicios disponibles.
 
