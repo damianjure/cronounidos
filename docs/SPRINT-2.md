@@ -53,11 +53,17 @@ Los reportes de este turno quedaron en `/tmp/chrono-sprint2-e2e-report-chrome3` 
 
 ## Pendiente para cerrar Sprint 2
 
-- CRUD de personas, equipos y roles desde el directorio. La gestión de contenidos, tipos/plantillas y cancelación ya está implementada; los archivos privados aún no tienen reemplazo/eliminación transaccional.
+- La gestión de contenidos, tipos/plantillas y cancelación ya está implementada; los archivos privados aún no tienen reemplazo/eliminación transaccional.
 - Selección explícita de varias instancias anteriores para actualizar desde una plantilla; hoy la aplicación explícita se hace bloque por bloque desde el tipo, sin propagación masiva.
 - Permisos de edición parcial por equipo, preservando campos/relaciones que el usuario no pueda leer.
 - E2E automatizada autenticada para los flujos nuevos (catálogos, plantillas, Storage y cancelación) en CI, además de pruebas reales de PWA/dispositivos. El navegador integrado ya validó esos flujos con Supabase local, pero las 28 E2E CLI cubren base y demo. No se aplicó ninguna migración remota.
 - Continuar Sprints 3–5: confirmaciones UI, reemplazos/conflictos, cobertura/calendario/matriz, modo vivo/Realtime y feedback +10 min.
+
+### Continuación del directorio (15/10/2026)
+
+Se agregó alta, edición, desactivación y eliminación explícita (solo si no está en uso) de personas, equipos y roles, además de alta/baja de integrantes por equipo, desde `/personas`. Los formularios respetan grants globales o de equipo; cada Server Action vuelve a comprobar autorización y RLS sigue siendo la barrera final. No se agregaron columnas ni migraciones. Los nombres se validan y los UUID de equipos/personas no se aceptan sin formato válido. La eliminación requiere abrir una sección de confirmación; desactivar conserva las referencias históricas.
+
+Lint, typecheck, 144 pruebas (7 suites) y build pasaron. Las pruebas SQL nuevas cubren admin, responsable acotado a Media, pendiente y aislamiento de organización. Las 28 E2E existentes en Chrome desktop/mobile pasaron, pero **no cubren aún el CRUD autenticado del directorio**; queda por validar visualmente y probar operaciones reales de ese flujo en Preview. La organización remota sigue sin seed ni personas reales.
 
 ## Configuración
 

@@ -42,7 +42,7 @@ insert into public.people(id,org_id,first_name,last_name) values('${person}','${
 update public.profiles set person_id='${person}',org_id='${org}' where user_id='${uid(4)}';
 insert into public.team_memberships(org_id,team_id,person_id) values('${org}','${team}','${person}');
 insert into public.roles(id,org_id,team_id,name) values('${uid(901)}','${org}','${team}','Streaming');
-insert into public.permission_grants(org_id,subject_user_id,permission,team_id) values ('${org}','${uid(1)}','administer',null),('${org}','${uid(3)}','plan',null),('${org}','${uid(3)}','read_content',null),('${org}','${uid(4)}','read_agenda',null),('${org}','${uid(5)}','read_agenda',null),('${org}','${uid(5)}','assign','${team}'),('${org}','${uid(5)}','confirm','${team}'),('${org}','${uid(5)}','read_people','${team}'),('${org}','${uid(5)}','read_content','${team}'),('${org}','${uid(6)}','read_agenda',null),('${org}','${uid(6)}','read_content','${otherTeam}'),('${otherOrg}','${uid(7)}','administer',null);
+insert into public.permission_grants(org_id,subject_user_id,permission,team_id) values ('${org}','${uid(1)}','administer',null),('${org}','${uid(3)}','plan',null),('${org}','${uid(3)}','read_content',null),('${org}','${uid(4)}','read_agenda',null),('${org}','${uid(5)}','read_agenda',null),('${org}','${uid(5)}','assign','${team}'),('${org}','${uid(5)}','edit_roles','${team}'),('${org}','${uid(5)}','confirm','${team}'),('${org}','${uid(5)}','read_people','${team}'),('${org}','${uid(5)}','read_content','${team}'),('${org}','${uid(6)}','read_agenda',null),('${org}','${uid(6)}','read_content','${otherTeam}'),('${otherOrg}','${uid(7)}','administer',null);
 insert into public.meetings(id,org_id,title,date,start_local_time) values('${meeting}','${org}','Titulo privado',current_date+1,'10:00');
 insert into public.meeting_revisions(id,org_id,meeting_id,revision,created_by,scheduled_start) values('${revision}','${org}','${meeting}',1,'${uid(3)}',now()+interval '1 day'),('${draft}','${org}','${meeting}',2,'${uid(3)}',now()+interval '1 day');
 insert into public.meeting_blocks(id,org_id,revision_id,sort_order,name,duration_seconds,team_id) values('${block}','${org}','${revision}',0,'Actividad pública',600,'${team}'),('${draftBlock}','${org}','${draft}',0,'Borrador secreto',100,'${team}');
@@ -471,6 +471,22 @@ describe("SQL real y RLS con auth.uid simulado (no servicio Auth)", () => {
         )
       ).rows,
     ).toEqual([]);
+  });
+  it("directorio: admin crea personas y equipos; responsable solo edita su equipo", async () => {
+    const newPerson = uid(811), newTeam = uid(211), newRole = uid(911);
+    await asUser(1, `insert into public.people(id,org_id,first_name,last_name) values('${newPerson}','${org}','Nueva','Ficticia')`);
+    await asUser(1, `insert into public.teams(id,org_id,name) values('${newTeam}','${org}','Equipo nuevo')`);
+    expect((await asUser(1, `select id from public.people where id='${newPerson}'`)).rows).toHaveLength(1);
+    expect((await asUser(1, `select id from public.teams where id='${newTeam}'`)).rows).toHaveLength(1);
+    await expect(asUser(5, `insert into public.people(org_id,first_name,last_name) values('${org}','No','Permitido')`)).rejects.toThrow(/row-level security/);
+    await expect(asUser(5, `insert into public.teams(org_id,name) values('${org}','No permitido')`)).rejects.toThrow(/row-level security/);
+    await asUser(5, `insert into public.roles(id,org_id,team_id,name) values('${newRole}','${org}','${team}','Rol de Media')`);
+    await expect(asUser(5, `insert into public.roles(org_id,team_id,name) values('${org}','${otherTeam}','Rol ajeno')`)).rejects.toThrow(/row-level security/);
+    expect((await asUser(5, `select id from public.roles where id='${newRole}'`)).rows).toHaveLength(1);
+    await asUser(5, `insert into public.team_memberships(org_id,team_id,person_id) values('${org}','${team}','${newPerson}')`);
+    await expect(asUser(5, `insert into public.team_memberships(org_id,team_id,person_id) values('${org}','${otherTeam}','${newPerson}')`)).rejects.toThrow(/row-level security/);
+    await expect(asUser(2, `insert into public.roles(org_id,team_id,name) values('${org}','${team}','Rol pendiente')`)).rejects.toThrow(/row-level security/);
+    await expect(asUser(7, `insert into public.team_memberships(org_id,team_id,person_id) values('${otherOrg}','${team}','${newPerson}')`)).rejects.toThrow();
   });
   it("seed ficticio se aplica sin tocar auth.users", async () => {
     await db.exec(readFileSync("supabase/seed.sql", "utf8"));
