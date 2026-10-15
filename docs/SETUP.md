@@ -2,7 +2,7 @@
 
 ## Estado actual
 
-La app de Sprints 0/1 y un tramo avanzado de Sprint 2 están implementados (ver SPRINT-2.md); no se creó ni modificó ningún proyecto remoto. Falta confirmar el nuevo proyecto Supabase y configurar Auth, el primer administrador y Vercel. No usar **caja-chica**, **docu-media-us** ni ningún proyecto ajeno.
+La app de Sprints 0/1 y un tramo avanzado de Sprint 2 están implementados (ver SPRINT-2.md). El usuario confirmó y creó un proyecto Supabase **independiente**, `Crono Unidos` (`ivmhgizuofxdvvvzdxnl`, São Paulo), el 15/10/2026. Se aplicaron allí las ocho migraciones versionadas, **sin seed ni usuarios reales**. Todavía faltan organización real, Auth/SMTP, primer administrador, Vercel y los sprints restantes; no está lista para público. No usar **caja-chica**, **docu-media-us** ni ningún proyecto ajeno.
 
 ## 1. Entorno local
 
@@ -33,12 +33,11 @@ Nunca poner secret/service-role keys en `NEXT_PUBLIC_*`, GitHub, logs o formular
 
 ## 2. Supabase independiente
 
-1. Crear un proyecto nuevo llamado `cronounidos` en la organización elegida por el usuario. **Pendiente de elección/confirmación de project ref**.
-2. Revisar las siete migraciones en `supabase/migrations/` y probarlas localmente. La sexta crea `crono-resources` como bucket privado, limita subidas a PNG/JPEG/WebP/PDF de hasta 5 MB y agrega políticas Storage por organización. No cambiarlo a público. La séptima agrega cancelación versionada de reuniones.
-3. Confirmar el project ref de destino antes de vincular o aplicar a remoto. No se ejecutó SQL remoto en esta entrega.
-4. Aplicar migraciones usando la CLI a ese proyecto confirmado; exponer solo `public` en Data API. `private` **no** debe estar expuesto. Las tablas tienen GRANT explícitos y RLS activo.
-5. Ejecutar los advisors de Supabase y una prueba de API con identidades reales de prueba, incluyendo `anon`, pendientes y miembros de dos organizaciones.
-6. Generar tipos desde la base local o proyecto confirmado al preparar el editor. Los clientes actuales usan validación y autorización DB; no hay tipos generados contra un proyecto remoto inexistente.
+1. **Hecho:** proyecto nuevo `Crono Unidos`, ref `ivmhgizuofxdvvvzdxnl`, organización Supabase `damianjure`, región `sa-east-1`. El checkout local está vinculado solo a ese ref; comprobar `supabase/.temp/project-ref` antes de cualquier `--linked`.
+2. **Hecho:** ocho migraciones en `supabase/migrations/`, aplicadas con `supabase db push --linked` y verificadas en `supabase_migrations.schema_migrations`. La sexta crea `crono-resources` privado, PNG/JPEG/WebP/PDF hasta 5 MB; la séptima agrega cancelación; la octava revoca `EXECUTE` público del activador opcional `public.rls_auto_enable()`. No usar `--include-seed` en remoto.
+3. **Verificado:** 30/30 tablas `public` con RLS; bucket privado; cero organizaciones (no se cargó la seed). `anon` y `authenticated` no pueden ejecutar `rls_auto_enable()`. El advisor aún marca deliberadamente `public_agenda` para `anon` y RPCs autorizadas `SECURITY DEFINER` para usuarios autenticados: cada función debe mantener comprobaciones internas de identidad/permiso y GRANT explícito. [Aviso de Supabase](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable).
+4. **Pendiente:** crear solo la organización real confirmada por el usuario y el primer administrador; configurar Auth y probar API con identidades de prueba (`anon`, pendiente y miembros de dos organizaciones), sin datos personales de la comunidad todavía. Exponer solo `public` en Data API; `private` **no** debe estar expuesto. Generar tipos al preparar las siguientes funcionalidades.
+5. **Rendimiento:** advisor remoto informa 9 advertencias `auth_rls_initplan` y avisos informativos de índices. Revisarlos antes del lanzamiento público, priorizando consultas reales; no crear indiscriminadamente índices para todas las FKs.
 
 ## 3. Auth email
 
@@ -86,11 +85,11 @@ En desarrollo local se puede usar el org UUID ficticio de `seed.sql`, pero **no*
 
 Pendiente vincular el proyecto Vercel a este GitHub, configurar el entorno (Preview y Production separados), HTTPS y dominio. Build: `npm run build`; Next.js detectado automáticamente. Node 24. El repositorio oficial es https://github.com/damianjure/cronounidos; se recomienda mantenerlo privado.
 
-No se hizo deploy ni se publicó una preview en esta entrega. Cualquier dominio como `app.unidosparaservir.org` debe confirmarse por el usuario. El bucket privado Storage está versionado y probado **solo localmente**; Realtime, scheduler de feedback y proveedor de correo de feedback corresponden a Sprints 4–5. No se simulan como servicios remotos disponibles.
+No se hizo deploy ni se publicó una preview en esta entrega. Cualquier dominio como `app.unidosparaservir.org` debe confirmarse por el usuario. El bucket privado Storage está versionado, probado localmente y creado remoto; el flujo de subida/descarga remoto aún no fue probado con usuarios reales. Realtime, scheduler de feedback y proveedor de correo de feedback corresponden a Sprints 4–5. No se simulan como servicios disponibles.
 
 ## 6. Verificación que falta sobre servicios reales
 
-- Supabase remoto independiente: migraciones, advisors, Auth/SMTP, redirecciones, cookies SSR y renovación, PostgREST/RLS y comprobación de que `private` no se exponga. Localmente se probaron registro, confirmación, invitación y recuperación **hasta cambiar la contraseña** con plantillas SSR; las cuentas quedaron pendientes hasta aprobación. También se probaron PostgREST/JWT/RLS, aprobación y suspensión por UI, ACL por equipo y aislamiento de dos organizaciones.
+- Supabase remoto independiente: las ocho migraciones, RLS estructural, bucket y advisors ya se verificaron. Falta Auth/SMTP, redirecciones, cookies SSR y renovación, PostgREST/RLS con identidades reales de prueba y comprobación de que `private` no se exponga. Localmente se probaron registro, confirmación, invitación y recuperación **hasta cambiar la contraseña** con plantillas SSR; las cuentas quedaron pendientes hasta aprobación. También se probaron PostgREST/JWT/RLS, aprobación y suspensión por UI, ACL por equipo y aislamiento de dos organizaciones.
 - Playwright CLI pasó **28/28** casos desktop/mobile con el Chrome instalado en este host usando `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`. Falta repetir en CI y automatizar E2E autenticadas de catálogos/Storage/cancelación; el navegador integrado sí verificó esos flujos localmente.
 - Instalación PWA en dispositivos reales iOS/Android, modo standalone y lectores de pantalla; el navegador integrado verificó manifest, worker, offline y teclado, pero no dispositivos reales.
 - Email y bootstrap; deploy/preview Vercel, advisors, observabilidad. No afirmar listo para producción hasta completar esas comprobaciones.
