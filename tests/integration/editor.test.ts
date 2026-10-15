@@ -431,6 +431,40 @@ it("aplicar plantilla a reuniones seleccionadas crea borradores atómicos y cons
   ]])).rejects.toThrow(/Existing draft/);
   expect(snapshotSchema.parse(await rpc(admin, "get_editor_snapshot", [draft.meetingId])).version).toBe(draft.version);
 });
+it("reemplazar o eliminar archivo privado encola limpieza y protege referencias", async () => {
+  const resource = id(981);
+  const oldPath = `${org}/${id(982)}.png`;
+  const nextPath = `${org}/${id(983)}.pdf`;
+  await db.query(
+    "insert into public.resources(id,org_id,title,storage_path,resource_type) values($1,$2,$3,$4,$5)",
+    [resource, org, "Archivo ficticio", oldPath, "image"],
+  );
+  await expect(rpc(member, "replace_unlinked_resource_file", [resource, oldPath, nextPath, "Nuevo", "document"]))
+    .rejects.toThrow(/Forbidden/);
+  await expect(rpc(admin, "replace_unlinked_resource_file", [resource, oldPath, `${other}/${id(984)}.pdf`, "Nuevo", "document"]))
+    .rejects.toThrow(/Invalid resource path/);
+  await rpc(admin, "replace_unlinked_resource_file", [resource, oldPath, nextPath, "Documento ficticio", "document"]);
+  expect((await db.query("select title,storage_path from public.resources where id=$1", [resource])).rows[0])
+    .toEqual({ title: "Documento ficticio", storage_path: nextPath });
+  expect((await actor(admin, "select path from public.pending_resource_file_cleanup($1)", [org])).rows)
+    .toEqual([{ path: oldPath }]);
+  await expect(actor(null, "select * from public.pending_resource_file_cleanup($1)", [org]))
+    .rejects.toThrow(/permission denied/);
+  await rpc(admin, "ack_resource_file_cleanup", [org, oldPath]);
+  expect((await actor(admin, "select path from public.pending_resource_file_cleanup($1)", [org])).rows).toEqual([]);
+
+  const meeting = snapshotSchema.parse(await rpc(admin, "create_editor_meeting", [org, metadata, null]));
+  const linked = snapshotSchema.parse(await rpc(admin, "save_editor_snapshot", [
+    meeting.meetingId, meeting.version, meeting.metadata, [emptyBlock("Borrador ficticio")],
+  ]));
+  await db.query("insert into public.resource_links(org_id,resource_id,block_id) values($1,$2,$3)", [org, resource, linked.blocks[0].id]);
+  await expect(rpc(admin, "delete_unlinked_resource_file", [resource, nextPath])).rejects.toThrow(/Resource in use/);
+  await db.query("delete from public.resource_links where resource_id=$1", [resource]);
+  await rpc(admin, "delete_unlinked_resource_file", [resource, nextPath]);
+  expect((await actor(admin, "select path from public.pending_resource_file_cleanup($1)", [org])).rows)
+    .toEqual([{ path: nextPath }]);
+  expect((await db.query("select id from public.resources where id=$1", [resource])).rows).toEqual([]);
+});
 it("puestos duplicados reinician confirmado y conservan historial del origen", async () => {
   const pos = id(960);
   const originalAssignment = id(961);

@@ -81,6 +81,25 @@ test("contenidos y Storage privado: crea catálogo, sube PNG y exige sesión", a
   } finally {
     await anonymous.dispose();
   }
+
+  const replacement = row.locator("details").filter({ has: page.locator("summary", { hasText: "Reemplazar archivo privado" }) });
+  await replacement.locator("summary").click();
+  const previousPath = await replacement.locator('input[name="oldPath"]').inputValue();
+  await replacement.locator('input[type="file"]').setInputFiles(path.resolve("public/icons/icon-512.png"));
+  await replacement.getByRole("button", { name: "Reemplazar archivo" }).click();
+  await expect.poll(() => page.locator("li").filter({ has: page.getByRole("heading", { name: fileName }) }).locator('input[name="oldPath"]').first().inputValue()).not.toBe(previousPath);
+  await expect(page.getByRole("status")).toContainText("Catálogo actualizado");
+  const replaced = await page.context().request.get(resourceUrl!, { maxRedirects: 0 });
+  expect(replaced.status()).toBe(307);
+  const updatedRow = page.locator("li").filter({ has: page.getByRole("heading", { name: fileName }) });
+  const deletion = updatedRow.locator("details").filter({ has: page.locator("summary", { hasText: "Eliminar archivo privado" }) });
+  await deletion.locator("summary").click();
+  await deletion.locator('input[name="confirm"]').check();
+  await deletion.getByRole("button", { name: "Eliminar archivo privado" }).click();
+  await expect(page.locator("li").filter({ has: page.getByRole("heading", { name: fileName }) })).toHaveCount(0);
+  await expect(page.getByRole("status")).toContainText("Catálogo actualizado");
+  const removed = await page.context().request.get(resourceUrl!, { maxRedirects: 0 });
+  expect(removed.status()).toBe(404);
 });
 
 test("tipos y plantillas: crea tipo versionado y guarda estructura", async ({ page }, info) => {
