@@ -1,5 +1,8 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
+import { existsSync } from "node:fs";
+
+const macChrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 let status;
 try {
@@ -22,6 +25,9 @@ const env = {
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: status.PUBLISHABLE_KEY,
   APP_URL: "http://127.0.0.1:3101",
   NEXT_BUILD_DIR: ".next-auth-e2e",
+  PLAYWRIGHT_CHROMIUM_EXECUTABLE:
+    process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ||
+    (process.platform === "darwin" && existsSync(macChrome) ? macChrome : undefined),
 };
 for (const [command, args] of [["npm", ["run", "build"]], ["npx", ["playwright", "test", "--config", "playwright.authenticated.config.ts"]]]) {
   const result = spawnSync(command, args, { env, stdio: "inherit" });

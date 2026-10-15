@@ -386,6 +386,51 @@ it("crear desde plantilla copia una definición sin alterar instancias anteriore
   ).toBe("Plantilla inicial");
   expect(next.blocks[0].name).toBe("Plantilla actualizada");
 });
+it("aplicar plantilla a reuniones seleccionadas crea borradores atómicos y conserva confirmaciones", async () => {
+  const templateId = id(951);
+  const block = emptyBlock("Bloque compartido");
+  block.durationSeconds = 300;
+  await db.query(
+    "insert into public.meeting_templates(id,org_id,name,definition_json) values($1,$2,$3,$4)",
+    [templateId, org, "Plantilla selectiva", { blocks: [block] }],
+  );
+  let published = snapshotSchema.parse(await rpc(admin, "create_editor_meeting", [org, metadata, templateId]));
+  let draft = snapshotSchema.parse(await rpc(admin, "create_editor_meeting", [org, metadata, templateId]));
+  published.blocks[0].responsibles = [
+    { assignmentId: null, personId: id(101), teamId: id(201), roleId: id(301) },
+  ];
+  published = snapshotSchema.parse(await rpc(admin, "publish_editor_snapshot", [
+    published.meetingId, published.version, published.metadata, published.blocks,
+  ]));
+  const originalRevision = published.publishedRevisionId;
+  const assignmentId = published.blocks[0].responsibles[0].assignmentId;
+  await db.query("update public.assignments set status='confirmed',responded_at=now() where id=$1", [assignmentId]);
+  block.durationSeconds = 540;
+  await db.query("update public.meeting_templates set definition_version=2,definition_json=$2 where id=$1", [templateId, { blocks: [block] }]);
+  const targets = [
+    { id: published.meetingId, version: published.version },
+    { id: draft.meetingId, version: draft.version },
+  ];
+  await expect(rpc(member, "apply_template_selected", [templateId, 2, targets])).rejects.toThrow(/Forbidden/);
+  await expect(rpc(admin, "apply_template_selected", [templateId, 1, targets])).rejects.toThrow(/Template version conflict/);
+  await expect(rpc(admin, "apply_template_selected", [templateId, 2, [targets[0], targets[0]]])).rejects.toThrow(/repeated targets/);
+  await rpc(admin, "apply_template_selected", [templateId, 2, targets]);
+  published = snapshotSchema.parse(await rpc(admin, "get_editor_snapshot", [published.meetingId]));
+  draft = snapshotSchema.parse(await rpc(admin, "get_editor_snapshot", [draft.meetingId]));
+  expect(published.publishedRevisionId).toBe(originalRevision);
+  expect(published.revisionId).not.toBe(originalRevision);
+  expect(published.blocks[0].durationSeconds).toBe(540);
+  expect(draft.blocks[0].durationSeconds).toBe(540);
+  expect(published.blocks[0].responsibles[0].assignmentId).toBe(assignmentId);
+  expect((await db.query("select status from public.assignments where id=$1", [assignmentId])).rows[0]).toEqual({ status: "confirmed" });
+  const publicRows = (await actor(null, "select activity,duration_seconds from public.public_agenda($1)", [published.meetingId])).rows;
+  expect(publicRows).toEqual([{ activity: "Bloque compartido", duration_seconds: 300 }]);
+  await expect(rpc(admin, "apply_template_selected", [templateId, 2, [
+    { id: draft.meetingId, version: draft.version },
+    { id: published.meetingId, version: published.version },
+  ]])).rejects.toThrow(/Existing draft/);
+  expect(snapshotSchema.parse(await rpc(admin, "get_editor_snapshot", [draft.meetingId])).version).toBe(draft.version);
+});
 it("puestos duplicados reinician confirmado y conservan historial del origen", async () => {
   const pos = id(960);
   const originalAssignment = id(961);

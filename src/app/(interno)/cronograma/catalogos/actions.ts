@@ -159,3 +159,34 @@ export async function deleteTemplate(form: FormData) {
   if (error) redirect("/cronograma/catalogos?error=uso");
   done("plantilla");
 }
+
+export async function applyTemplateSelected(form: FormData) {
+  const a = await editorContext();
+  const id = idSchema.safeParse(form.get("id"));
+  const version = versionSchema.safeParse(form.get("version"));
+  const confirmed = form.get("confirm") === "yes";
+  const rawTargets = form.getAll("targets");
+  if (!id.success || !version.success || !confirmed || rawTargets.length < 1 || rawTargets.length > 20)
+    redirect("/cronograma/catalogos?error=datos");
+  const targets = rawTargets.map((raw) => {
+    const [meetingId, rawVersion] = String(raw).split(":");
+    const meeting = idSchema.safeParse(meetingId);
+    const revision = versionSchema.safeParse(rawVersion);
+    if (!meeting.success || !revision.success) return null;
+    return { id: meeting.data, version: revision.data };
+  });
+  if (targets.some((target) => !target) || new Set(targets.map((target) => target?.id)).size !== targets.length)
+    redirect("/cronograma/catalogos?error=datos");
+  const { error } = await a.client.rpc("apply_template_selected", {
+    p_template: id.data,
+    p_template_version: version.data,
+    p_targets: targets,
+  });
+  if (error) {
+    const conflict = /conflict|draft|closed/i.test(error.message);
+    redirect(`/cronograma/catalogos?error=${conflict ? "conflicto" : "guardar"}`);
+  }
+  revalidatePath("/cronograma");
+  revalidatePath("/");
+  done("plantilla");
+}

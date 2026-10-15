@@ -5,6 +5,7 @@ import { BlockTypeForm } from "@/components/editor/block-type-form";
 import { fieldDefinition } from "@/lib/editor/model";
 import { editorContext } from "@/lib/editor/server";
 import {
+  applyTemplateSelected,
   deleteBlockType,
   deleteTemplate,
   renameTemplate,
@@ -29,7 +30,7 @@ export default async function Catalogos({
   const [types, templates, meetings, params] = await Promise.all([
     a.client.from("block_types").select("id,name,version,field_schema_json").eq("org_id", a.orgId).order("name"),
     a.client.from("meeting_templates").select("id,name,definition_version").eq("org_id", a.orgId).order("name"),
-    a.client.from("meetings").select("id,title,date").eq("org_id", a.orgId).order("date", { ascending: false }).limit(100),
+    a.client.from("meetings").select("id,title,date,version,status,published_revision_id,draft_revision_id").eq("org_id", a.orgId).order("date", { ascending: false }).limit(100),
     searchParams,
   ]);
   if (types.error || templates.error || meetings.error)
@@ -93,6 +94,27 @@ export default async function Catalogos({
                 </label>
                 <Button variant="outline">Actualizar plantilla para futuras reuniones</Button>
               </form>
+              <details>
+                <summary>Aplicar v{row.definition_version} a reuniones existentes</summary>
+                <form action={applyTemplateSelected} className="field-grid">
+                  <input type="hidden" name="id" value={row.id} />
+                  <input type="hidden" name="version" value={row.definition_version} />
+                  <p className="muted">Elegí hasta 20 reuniones. La operación es atómica: si alguna cambió, no se modifica ninguna. Una reunión publicada conserva la versión pública y recibe un borrador nuevo. No se reemplazan borradores ya abiertos de reuniones publicadas.</p>
+                  <p className="muted">Se reemplaza la estructura y el contenido de los bloques. Los responsables y sus confirmaciones se conservan solo en bloques con igual nombre y tipo; los bloques nuevos quedan sin responsables. Las asignaciones anteriores quedan en el historial. Revisá el borrador antes de publicarlo.</p>
+                  <div role="group" aria-label="Reuniones para actualizar">
+                    {meetings.data?.filter((meeting) =>
+                      meeting.status !== "finished" && meeting.status !== "cancelled" &&
+                      !(meeting.published_revision_id && meeting.draft_revision_id),
+                    ).map((meeting) => (
+                      <label className="field" key={meeting.id}>
+                        <span><input type="checkbox" name="targets" value={`${meeting.id}:${meeting.version}`} /> {meeting.date} · {meeting.title} {meeting.published_revision_id ? "(publicada; crea borrador)" : "(borrador)"}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <label className="field"><span><input type="checkbox" name="confirm" value="yes" required /> Confirmo que seleccioné estas reuniones y revisaré los borradores antes de publicarlos.</span></label>
+                  <Button variant="outline">Crear borradores desde esta plantilla</Button>
+                </form>
+              </details>
               <form action={deleteTemplate}>
                 <input type="hidden" name="id" value={row.id} />
                 <Button variant="ghost">Eliminar plantilla</Button>

@@ -117,6 +117,22 @@ test("tipos y plantillas: crea tipo versionado y guarda estructura", async ({ pa
   await page.getByRole("textbox", { name: "Nombre de la plantilla" }).fill(templateName);
   await page.getByRole("button", { name: "Guardar como plantilla" }).click();
   await expect(page.getByRole("heading", { name: new RegExp(templateName) })).toBeVisible();
+
+  const selectedName = `Seleccionada ${suffix}`;
+  await page.goto("/cronograma/nueva");
+  await page.locator('input[name="title"]').fill(selectedName);
+  await page.locator('input[name="date"]').fill("2026-11-17");
+  await page.locator('select[name="templateId"]').selectOption({ label: templateName });
+  await page.getByRole("button", { name: "Crear borrador" }).click();
+  await expect(page).toHaveURL(/\/cronograma\/[0-9a-f-]{36}$/);
+  await page.goto("/cronograma/catalogos");
+  const templateRow = page.locator("li").filter({ has: page.getByRole("heading", { name: new RegExp(templateName) }) });
+  const selective = templateRow.locator("details").filter({ has: page.locator("summary", { hasText: "Aplicar v1 a reuniones existentes" }) });
+  await selective.locator("summary").click();
+  await selective.getByLabel(new RegExp(selectedName)).check();
+  await selective.locator('input[name="confirm"]').check();
+  await selective.getByRole("button", { name: "Crear borradores desde esta plantilla" }).click();
+  await expect(page.getByRole("status")).toContainText("Cambio guardado");
 });
 
 test("reunión: crea borrador y cancela conservando historial", async ({ page }, info) => {
