@@ -83,7 +83,9 @@ En desarrollo local se puede usar el org UUID ficticio de `seed.sql`, pero **no*
 
 ## 5. Vercel
 
-Pendiente vincular el proyecto Vercel a este GitHub, configurar el entorno (Preview y Production separados), HTTPS y dominio. Build: `npm run build`; Next.js detectado automáticamente. Node 24. El repositorio oficial es https://github.com/damianjure/cronounidos; se recomienda mantenerlo privado.
+Convención de nombres aprobada: nombre visible de la app y del proyecto Supabase **Crono Unidos**; proyecto Vercel nuevo **`crono-unidos`** (si está disponible, porque Vercel usa identificadores tipo slug). La organización de datos dentro de Supabase es **Unidos para Servir** (`unidos`), no otro proyecto de infraestructura. El repositorio existente sigue siendo [`damianjure/cronounidos`](https://github.com/damianjure/cronounidos); no renombrarlo solo para uniformar. Cada recurso debe pertenecer al proyecto nuevo, sin reutilizar proyectos, variables de entorno ni bases de datos de otras aplicaciones.
+
+Pendiente crear y vincular ese proyecto Vercel a este GitHub, configurar el entorno (Preview y Production separados), HTTPS y dominio. Build: `npm run build`; Next.js detectado automáticamente. Node 24. Se recomienda mantener el repositorio privado. El conector Vercel pudo listar proyectos existentes, pero la consulta explícita al scope de esos proyectos devolvió `403 forbidden`; la CLI no tiene sesión iniciada y Chrome muestra la pantalla de login. No crear el proyecto en un scope predeterminado hasta confirmar acceso al correcto.
 
 No se hizo deploy ni se publicó una preview en esta entrega. Cualquier dominio como `app.unidosparaservir.org` debe confirmarse por el usuario. El bucket privado Storage está versionado, probado localmente y creado remoto; el flujo de subida/descarga remoto aún no fue probado con usuarios reales. Realtime, scheduler de feedback y proveedor de correo de feedback corresponden a Sprints 4–5. No se simulan como servicios disponibles.
 
