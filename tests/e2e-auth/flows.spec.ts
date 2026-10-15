@@ -171,7 +171,7 @@ test("reunión: crea borrador y cancela conservando historial", async ({ page },
   await expect(page.locator("li").filter({ has: page.getByRole("heading", { name: title }) })).toContainText("Cancelada");
 });
 
-test("edición parcial: notas y campos de equipo no exponen otros bloques", async ({ page }, info) => {
+test("edición parcial: notas, campos y enlaces no exponen otros bloques", async ({ page }, info) => {
   await login(page);
   const suffix = `${info.project.name}-${Date.now()}`;
   const teamName = `Equipo notas ${suffix}`;
@@ -216,4 +216,13 @@ test("edición parcial: notas y campos de equipo no exponen otros bloques", asyn
   await page.getByRole("button", { name: "Guardar campos" }).click();
   await expect(page.getByRole("status")).toContainText("Campos guardados en borrador");
   await expect(page.getByRole("textbox", { name: "Guion del equipo" })).toHaveValue("https://example.invalid/nuevo");
+  await page.getByRole("textbox", { name: "Nombre del enlace" }).fill("Plan del equipo");
+  await page.getByRole("textbox", { name: "URL HTTPS" }).fill("https://example.invalid/plan");
+  await page.getByRole("button", { name: "Agregar enlace" }).click();
+  await expect(page.getByRole("status")).toContainText("Enlace agregado al borrador");
+  await expect(page.getByRole("link", { name: "Plan del equipo" })).toHaveAttribute("href", "https://example.invalid/plan");
+  await page.getByText("Desvincular Plan del equipo").click();
+  await page.getByRole("button", { name: "Confirmar desvinculación" }).click();
+  await expect(page.getByRole("status")).toContainText("Recurso desvinculado del borrador");
+  await expect(page.getByRole("link", { name: "Plan del equipo" })).toHaveCount(0);
 });

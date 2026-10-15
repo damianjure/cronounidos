@@ -3,9 +3,9 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { requireAccess } from "@/lib/auth";
-import { fieldDefinition } from "@/lib/editor/model";
+import { fieldDefinition, safeUrl } from "@/lib/editor/model";
 import { TeamCustomFields } from "@/components/editor/team-custom-fields";
-import { saveTeamNotes } from "./actions";
+import { addTeamLink, removeTeamLink, saveTeamNotes } from "./actions";
 
 const responseSchema = z.object({
   meetingId: z.uuid(),
@@ -15,6 +15,7 @@ const responseSchema = z.object({
     id: z.uuid(), name: z.string(), notes: z.string(),
     fieldSchema: z.array(fieldDefinition),
     customFields: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
+    resources: z.array(z.object({ id: z.uuid(), title: z.string(), url: z.string().nullable() })),
   })),
 });
 
@@ -41,12 +42,12 @@ export default async function TeamNotes({
       <div className="page-heading">
         <div>
           <h1>Contenido de tu equipo</h1>
-          <p className="muted">{snapshot.title}. Solo se muestran y editan las notas y campos de los bloques de este equipo.</p>
+          <p className="muted">{snapshot.title}. Solo se muestran y editan las notas, campos y enlaces de los bloques de este equipo.</p>
         </div>
         <Button asChild variant="outline"><Link href="/cronograma">Volver al cronograma</Link></Button>
       </div>
       {query.error && <p className="notice error" role="alert">{query.error === "conflicto" ? "La reunión cambió. Revisá el contenido actual antes de guardar otra vez." : "No se pudo guardar. Revisá los valores, tus permisos y el estado de la reunión."}</p>}
-      {query.ok && <p className="notice" role="status">{query.ok === "campos" ? "Campos guardados en borrador." : "Nota guardada en borrador."}</p>}
+      {query.ok && <p className="notice" role="status">{query.ok === "campos" ? "Campos guardados en borrador." : query.ok === "enlace" ? "Enlace agregado al borrador." : query.ok === "desvinculado" ? "Recurso desvinculado del borrador." : "Nota guardada en borrador."}</p>}
       <p className="notice">Guardar crea un borrador nuevo; si la reunión está publicada, su versión visible sigue intacta hasta que alguien con permiso global publique los cambios. No se envían datos de otros equipos a esta página.</p>
       <section className="panel">
         <h2>Bloques de tu equipo</h2>
@@ -66,6 +67,38 @@ export default async function TeamNotes({
                 <Button variant="outline">Guardar nota</Button>
               </form>
               <TeamCustomFields key={`${block.id}-${snapshot.version}`} meetingId={id} teamId={teamId} blockId={block.id} version={snapshot.version} schema={block.fieldSchema} initialValues={block.customFields} />
+              <div className="editor-fields">
+                <h4>Recursos y enlaces</h4>
+                {!block.resources.length && <p className="muted">No hay recursos vinculados a este bloque.</p>}
+                <ul className="member-list">
+                  {block.resources.map((resource) => <li key={resource.id}>
+                    {resource.url && safeUrl.safeParse(resource.url).success
+                      ? <a href={resource.url} target="_blank" rel="noopener noreferrer">{resource.title}</a>
+                      : <span>{resource.title} (archivo privado)</span>}
+                    <details>
+                      <summary>Desvincular {resource.title}</summary>
+                      <p className="muted">Se quita solo del borrador de este bloque; el recurso y la versión publicada se conservan.</p>
+                      <form action={removeTeamLink}>
+                        <input type="hidden" name="meetingId" value={id} />
+                        <input type="hidden" name="teamId" value={teamId} />
+                        <input type="hidden" name="blockId" value={block.id} />
+                        <input type="hidden" name="resourceId" value={resource.id} />
+                        <input type="hidden" name="version" value={snapshot.version} />
+                        <Button variant="outline">Confirmar desvinculación</Button>
+                      </form>
+                    </details>
+                  </li>)}
+                </ul>
+                <form action={addTeamLink} className="editor-fields">
+                  <input type="hidden" name="meetingId" value={id} />
+                  <input type="hidden" name="teamId" value={teamId} />
+                  <input type="hidden" name="blockId" value={block.id} />
+                  <input type="hidden" name="version" value={snapshot.version} />
+                  <label className="field">Nombre del enlace<input name="title" required maxLength={200} /></label>
+                  <label className="field">URL HTTPS<input name="url" type="url" required maxLength={2048} placeholder="https://..." /></label>
+                  <Button variant="outline">Agregar enlace</Button>
+                </form>
+              </div>
             </li>
           ))}
         </ul>
