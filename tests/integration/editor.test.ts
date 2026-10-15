@@ -469,9 +469,13 @@ it("editor parcial de equipo modifica solo su nota y preserva el borrador oculto
   const own = emptyBlock("Media ficticia");
   own.teamId = id(201);
   own.notes = "Nota inicial de Media";
+  own.fieldSchema = [{ key: "url_guion", label: "Guion", type: "url" }];
+  own.customFields = { url_guion: "https://example.invalid/inicial" };
   const hidden = emptyBlock("Otro equipo ficticio");
   hidden.teamId = id(202);
   hidden.notes = "Nota privada de otro equipo";
+  hidden.fieldSchema = [{ key: "dato_oculto", label: "Oculto", type: "text" }];
+  hidden.customFields = { dato_oculto: "Valor secreto del otro equipo" };
   hidden.songIds = [id(601)];
   let meeting = snapshotSchema.parse(await rpc(admin, "create_editor_meeting", [org, metadata, null]));
   meeting = snapshotSchema.parse(await rpc(admin, "publish_editor_snapshot", [
@@ -479,6 +483,12 @@ it("editor parcial de equipo modifica solo su nota y preserva el borrador oculto
   ]));
   const publishedRevision = meeting.publishedRevisionId;
   await expect(rpc(member, "get_team_block_notes", [meeting.meetingId, id(201)])).rejects.toThrow(/Forbidden/);
+  await expect(rpc(member, "save_team_block_fields", [meeting.meetingId, id(201), meeting.blocks[0].id, meeting.version, own.customFields]))
+    .rejects.toThrow(/Forbidden/);
+  await expect(rpc(otherAdmin, "save_team_block_fields", [meeting.meetingId, id(201), meeting.blocks[0].id, meeting.version, own.customFields]))
+    .rejects.toThrow(/Forbidden/);
+  await expect(actor(null, "select public.save_team_block_fields($1,$2,$3,$4,$5) result", [meeting.meetingId, id(201), meeting.blocks[0].id, meeting.version, own.customFields]))
+    .rejects.toThrow(/permission denied/);
   await db.query(
     "insert into public.permission_grants(org_id,subject_user_id,team_id,permission) values($1,$2,$3,'plan'),($1,$2,$3,'read_content')",
     [org, member, id(201)],
@@ -486,14 +496,15 @@ it("editor parcial de equipo modifica solo su nota y preserva el borrador oculto
   await expect(rpc(member, "get_editor_snapshot", [meeting.meetingId])).rejects.toThrow(/Forbidden/);
   expect((await actor(member, "select id from public.team_note_editor_teams($1)", [org])).rows)
     .toEqual([{ id: id(201) }]);
-  const visible = await rpc(member, "get_team_block_notes", [meeting.meetingId, id(201)]) as { version: number; blocks: { id: string; name: string; notes: string }[] };
-  expect(visible.blocks).toEqual([{ id: meeting.blocks[0].id, name: "Media ficticia", notes: "Nota inicial de Media" }]);
+  const visible = await rpc(member, "get_team_block_notes", [meeting.meetingId, id(201)]) as { version: number; blocks: { id: string; name: string; notes: string; fieldSchema: unknown[]; customFields: Record<string, unknown> }[] };
+  expect(visible.blocks).toEqual([{ id: meeting.blocks[0].id, name: "Media ficticia", notes: "Nota inicial de Media", fieldSchema: own.fieldSchema, customFields: own.customFields }]);
   expect(JSON.stringify(visible)).not.toContain("Nota privada de otro equipo");
+  expect(JSON.stringify(visible)).not.toContain("Valor secreto del otro equipo");
   expect(JSON.stringify(visible)).not.toContain(id(601));
   await expect(rpc(member, "get_team_block_notes", [meeting.meetingId, id(202)])).rejects.toThrow(/Forbidden/);
   await expect(rpc(member, "save_team_block_notes", [meeting.meetingId, id(201), meeting.blocks[1].id, visible.version, "Intrusión"]))
     .rejects.toThrow(/Forbidden/);
-  const saved = await rpc(member, "save_team_block_notes", [meeting.meetingId, id(201), meeting.blocks[0].id, visible.version, "Nueva nota de Media"]) as { version: number; blocks: { notes: string }[] };
+  const saved = await rpc(member, "save_team_block_notes", [meeting.meetingId, id(201), meeting.blocks[0].id, visible.version, "Nueva nota de Media"]) as { version: number; blocks: { id: string; notes: string }[] };
   expect(saved.blocks[0].notes).toBe("Nueva nota de Media");
   await expect(rpc(member, "save_team_block_notes", [meeting.meetingId, id(201), meeting.blocks[0].id, visible.version, "Stale"]))
     .rejects.toThrow(/Version conflict/);
@@ -503,6 +514,21 @@ it("editor parcial de equipo modifica solo su nota y preserva el borrador oculto
   expect(full.blocks[1].notes).toBe("Nota privada de otro equipo");
   expect(full.blocks[1].songIds).toEqual([id(601)]);
   expect(full.blocks[0].notes).toBe("Nueva nota de Media");
+  const beforeFields = saved.version;
+  await expect(rpc(member, "save_team_block_fields", [meeting.meetingId, id(201), meeting.blocks[1].id, beforeFields, { dato_oculto: "Intrusión" }]))
+    .rejects.toThrow(/Forbidden/);
+  await expect(rpc(member, "save_team_block_fields", [meeting.meetingId, id(201), saved.blocks[0].id, beforeFields, { dato_oculto: "Intrusión" }]))
+    .rejects.toThrow(/Unknown custom field/);
+  await expect(rpc(member, "save_team_block_fields", [meeting.meetingId, id(201), saved.blocks[0].id, beforeFields, { url_guion: "http://inseguro.invalid" }]))
+    .rejects.toThrow(/Unsafe URL/);
+  const fieldsSaved = await rpc(member, "save_team_block_fields", [meeting.meetingId, id(201), saved.blocks[0].id, beforeFields, { url_guion: "https://example.invalid/nuevo" }]) as { version: number; blocks: { customFields: Record<string, unknown> }[] };
+  expect(fieldsSaved.blocks[0].customFields).toEqual({ url_guion: "https://example.invalid/nuevo" });
+  await expect(rpc(member, "save_team_block_fields", [meeting.meetingId, id(201), meeting.blocks[0].id, beforeFields, {}]))
+    .rejects.toThrow(/Version conflict/);
+  const afterFields = snapshotSchema.parse(await rpc(admin, "get_editor_snapshot", [meeting.meetingId]));
+  expect(afterFields.publishedRevisionId).toBe(publishedRevision);
+  expect(afterFields.blocks[0].notes).toBe("Nueva nota de Media");
+  expect(afterFields.blocks[1].customFields).toEqual(hidden.customFields);
 });
 it("puestos duplicados reinician confirmado y conservan historial del origen", async () => {
   const pos = id(960);

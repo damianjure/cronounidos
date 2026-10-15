@@ -171,7 +171,7 @@ test("reunión: crea borrador y cancela conservando historial", async ({ page },
   await expect(page.locator("li").filter({ has: page.getByRole("heading", { name: title }) })).toContainText("Cancelada");
 });
 
-test("edición parcial: notas de equipo no exponen otros bloques", async ({ page }, info) => {
+test("edición parcial: notas y campos de equipo no exponen otros bloques", async ({ page }, info) => {
   await login(page);
   const suffix = `${info.project.name}-${Date.now()}`;
   const teamName = `Equipo notas ${suffix}`;
@@ -192,17 +192,28 @@ test("edición parcial: notas de equipo no exponen otros bloques", async ({ page
   await page.getByRole("combobox", { name: "Equipo principal" }).selectOption({ label: teamName });
   const teamId = await page.getByRole("combobox", { name: "Equipo principal" }).inputValue();
   await page.getByRole("textbox", { name: "Notas privadas" }).fill("Nota de mi equipo");
+  await page.getByText("Agregar campo personalizado").click();
+  await page.getByRole("textbox", { name: "Identificador" }).fill("guion_url");
+  await page.getByRole("textbox", { name: "Etiqueta" }).fill("Guion del equipo");
+  await page.getByRole("combobox", { name: "Tipo", exact: true }).selectOption("url");
+  await page.getByRole("button", { name: "Agregar campo" }).click();
+  await page.getByRole("textbox", { name: "Guion del equipo" }).fill("https://example.invalid/guion");
   await page.getByRole("button", { name: "Agregar actividad" }).click();
   await page.getByRole("textbox", { name: "Notas privadas" }).fill("Nota oculta de otro bloque");
   await page.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(page.locator("p.notice[role=status]")).toContainText("Borrador guardado");
 
   await page.goto(`/cronograma/${meetingId}/equipos/${teamId}`);
-  await expect(page.getByRole("heading", { name: "Notas de tu equipo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Contenido de tu equipo" })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Nota interna" })).toHaveValue("Nota de mi equipo");
+  await expect(page.getByRole("textbox", { name: "Guion del equipo" })).toHaveValue("https://example.invalid/guion");
   await expect(page.getByText("Nota oculta de otro bloque")).toHaveCount(0);
   await page.getByRole("textbox", { name: "Nota interna" }).fill("Nota editada de mi equipo");
   await page.getByRole("button", { name: "Guardar nota" }).click();
   await expect(page.getByRole("status")).toContainText("Nota guardada en borrador");
   await expect(page.getByRole("textbox", { name: "Nota interna" })).toHaveValue("Nota editada de mi equipo");
+  await page.getByRole("textbox", { name: "Guion del equipo" }).fill("https://example.invalid/nuevo");
+  await page.getByRole("button", { name: "Guardar campos" }).click();
+  await expect(page.getByRole("status")).toContainText("Campos guardados en borrador");
+  await expect(page.getByRole("textbox", { name: "Guion del equipo" })).toHaveValue("https://example.invalid/nuevo");
 });

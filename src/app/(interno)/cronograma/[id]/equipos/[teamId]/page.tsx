@@ -3,13 +3,19 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { requireAccess } from "@/lib/auth";
+import { fieldDefinition } from "@/lib/editor/model";
+import { TeamCustomFields } from "@/components/editor/team-custom-fields";
 import { saveTeamNotes } from "./actions";
 
 const responseSchema = z.object({
   meetingId: z.uuid(),
   version: z.number().int().positive(),
   title: z.string(),
-  blocks: z.array(z.object({ id: z.uuid(), name: z.string(), notes: z.string() })),
+  blocks: z.array(z.object({
+    id: z.uuid(), name: z.string(), notes: z.string(),
+    fieldSchema: z.array(fieldDefinition),
+    customFields: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
+  })),
 });
 
 export default async function TeamNotes({
@@ -34,14 +40,14 @@ export default async function TeamNotes({
     <>
       <div className="page-heading">
         <div>
-          <h1>Notas de tu equipo</h1>
-          <p className="muted">{snapshot.title}. Solo se muestran y editan las notas de los bloques de este equipo.</p>
+          <h1>Contenido de tu equipo</h1>
+          <p className="muted">{snapshot.title}. Solo se muestran y editan las notas y campos de los bloques de este equipo.</p>
         </div>
         <Button asChild variant="outline"><Link href="/cronograma">Volver al cronograma</Link></Button>
       </div>
-      {query.error && <p className="notice error" role="alert">{query.error === "conflicto" ? "La reunión cambió. Revisá la nota actual antes de guardar otra vez." : "No se pudo guardar. Revisá tus permisos y el estado de la reunión."}</p>}
-      {query.ok && <p className="notice" role="status">Nota guardada en borrador.</p>}
-      <p className="notice">Guardar crea un borrador nuevo; si la reunión está publicada, su versión visible sigue intacta hasta que alguien con permiso global publique los cambios. No se envían notas, personas ni relaciones de otros equipos a esta página.</p>
+      {query.error && <p className="notice error" role="alert">{query.error === "conflicto" ? "La reunión cambió. Revisá el contenido actual antes de guardar otra vez." : "No se pudo guardar. Revisá los valores, tus permisos y el estado de la reunión."}</p>}
+      {query.ok && <p className="notice" role="status">{query.ok === "campos" ? "Campos guardados en borrador." : "Nota guardada en borrador."}</p>}
+      <p className="notice">Guardar crea un borrador nuevo; si la reunión está publicada, su versión visible sigue intacta hasta que alguien con permiso global publique los cambios. No se envían datos de otros equipos a esta página.</p>
       <section className="panel">
         <h2>Bloques de tu equipo</h2>
         {!snapshot.blocks.length && <p className="muted">Esta reunión no tiene bloques asignados a tu equipo.</p>}
@@ -59,6 +65,7 @@ export default async function TeamNotes({
                 </label>
                 <Button variant="outline">Guardar nota</Button>
               </form>
+              <TeamCustomFields key={`${block.id}-${snapshot.version}`} meetingId={id} teamId={teamId} blockId={block.id} version={snapshot.version} schema={block.fieldSchema} initialValues={block.customFields} />
             </li>
           ))}
         </ul>

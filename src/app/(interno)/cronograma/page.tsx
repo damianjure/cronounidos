@@ -63,7 +63,7 @@ export default async function Schedule({ searchParams }: { searchParams: Promise
               </Button>}
               {!permission.data && m.status !== "cancelled" && m.status !== "finished" && editableTeams.map((team) => (
                 <Button asChild variant="outline" key={team.id}>
-                  <Link href={`/cronograma/${m.id}/equipos/${team.id}`}>Notas de {team.name}</Link>
+                  <Link href={`/cronograma/${m.id}/equipos/${team.id}`}>Contenido de {team.name}</Link>
                 </Button>
               ))}
               {permission.data && m.status !== "cancelled" && m.status !== "finished" && <CancelMeetingForm id={m.id} version={m.version} />}

@@ -55,7 +55,7 @@ Los reportes de este turno quedaron en `/tmp/chrono-sprint2-e2e-report-chrome3` 
 
 - La gestión de contenidos, tipos/plantillas y cancelación ya está implementada. Los archivos privados ahora tienen reemplazo/eliminación de recursos **sin vínculos**, con cambio de catálogo y cola de limpieza en una misma transacción; la eliminación física en Storage es posterior, idempotente y reintentable. No se permite reemplazar un recurso referenciado por una revisión para no modificar contenido histórico de forma implícita.
 - La actualización selectiva de plantillas ya crea borradores para hasta 20 reuniones elegidas explícitamente en una transacción; queda pendiente validar UX en dispositivos físicos y decidir si hace falta un modo de fusión más fino por bloque.
-- Edición parcial por equipo: la primera ruta estrecha de notas de bloque ya preserva campos/relaciones no legibles. Aún faltan otros campos/acciones de edición parcial (campos personalizados, vínculos y asignaciones) antes de cerrar este punto por completo.
+- Edición parcial por equipo: la ruta estrecha de notas y campos personalizados preserva campos/relaciones no legibles. Aún faltan vínculos y asignaciones antes de cerrar este punto por completo.
 - E2E autenticadas en CI, además de pruebas reales de PWA/dispositivos. Las 28 E2E CLI originales cubren base y demo; la nueva suite local autenticada cubre los flujos principales del editor/directorio, pero todavía no corre en CI ni en Preview remota.
 - Continuar Sprints 3–5: confirmaciones UI, reemplazos/conflictos, cobertura/calendario/matriz, modo vivo/Realtime y feedback +10 min.
 
@@ -85,9 +85,15 @@ La undécima migración incorpora RPCs para listar equipos editables, leer solo 
 
 PGlite comprobó denegación sin permisos, aislamiento de otro equipo, prohibición del editor global, versionado optimista y preservación de otro bloque y sus canciones. La undécima migración se aplicó en Supabase local **y** en el remoto `ivmhgizuofxdvvvzdxnl`: lint local solo mostró los tres warnings anteriores y el advisor local no encontró problemas. El advisor remoto reportó **0 errores y 25 warnings** (23 RPCs `SECURITY DEFINER` autenticadas, `public_agenda` anónima y protección de contraseñas filtradas desactivada). Chrome E2E autenticado pasó **10/10** en desktop/mobile, incluido el nuevo flujo; el primer intento **8/10** encontró únicamente un selector ambiguo por el `role=status` de dnd-kit y se corrigió. `npm run check` pasó con **147 tests / 7 suites**. Falta verificar la nueva Preview contra el servicio remoto sin datos reales y completar los otros campos de edición parcial.
 
+### Campos personalizados acotados por equipo (15/10/2026)
+
+La duodécima migración amplía la proyección del equipo con **solo** los esquemas y valores personalizados de sus propios bloques y agrega una RPC separada para guardar esos valores. La definición del campo se toma del snapshot confiable en PostgreSQL, no del formulario; se validan tipo, enlace HTTPS, claves conocidas, tamaño, grants `plan` + `read_content` y versión esperada. La operación genera un nuevo borrador y conserva notas, vínculos, asignaciones y bloques ajenos, sin enviarlos al cliente. La UI no deja crear ni alterar definiciones desde el acceso acotado.
+
+PGlite cubrió aislamiento, clave desconocida, URL insegura, versión obsoleta y preservación de la revisión publicada y valores ocultos. La migración se aplicó al Supabase local y al remoto independiente `ivmhgizuofxdvvvzdxnl` tras un dry-run que listó **solo** este archivo; el dry-run posterior quedó al día y el advisor remoto de seguridad no mostró errores. `npm run check` pasó con **147/147 pruebas en 7 suites**; Chrome E2E autenticado local pasó **10/10** desktop/mobile, incluida la edición de campos. `supabase db lint --local` conserva solo los tres warnings preexistentes. Falta cubrir edición acotada de vínculos/asignaciones, CI/Preview remota y dispositivos físicos. No se escribieron datos de prueba en Supabase remoto.
+
 ## Configuración
 
-Se mantiene `SETUP.md`: proyecto remoto **independiente pendiente de confirmación**; aplicar las **siete** migraciones en orden, bootstrap de admin, variables, SMTP/templates/redirects y Vercel. El bucket se crea por migración; no hacerlo público. No se creó ni modificó otro Supabase remoto. Sin configuración, el espacio interno muestra aviso y la demo sigue separada.
+El estado operativo actualizado está en `SETUP.md`: proyecto Supabase remoto independiente confirmado, doce migraciones aplicadas sin seed, administrador inicial y Preview configurados. Falta QA remota integral y Production; el bucket permanece privado. No se creó ni modificó otro Supabase remoto.
 
 Para probar solo la demo local, sin backend:
 

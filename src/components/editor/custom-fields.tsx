@@ -12,12 +12,14 @@ export function CustomFields({
   onSchema,
   onValues,
   disabled,
+  allowSchemaEditing = true,
 }: {
   schema: FieldDefinition[];
   values: EditorBlock["customFields"];
   onSchema: (s: FieldDefinition[]) => void;
   onValues: (v: EditorBlock["customFields"]) => void;
   disabled: boolean;
+  allowSchemaEditing?: boolean;
 }) {
   const [key, setKey] = useState("");
   const [label, setLabel] = useState("");
@@ -77,7 +79,7 @@ export function CustomFields({
           )}
         </label>
       ))}
-      <details>
+      {allowSchemaEditing && <details>
         <summary>Agregar campo personalizado</summary>
         <div className="field-grid">
           <label className="field">
@@ -161,7 +163,7 @@ export function CustomFields({
             {error}
           </p>
         )}
-      </details>
+      </details>}
     </fieldset>
   );
 }
