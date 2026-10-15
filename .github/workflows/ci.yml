@@ -30,3 +30,38 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+  authenticated-local:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.101.0
+      - run: npm ci
+      - name: Preparar PostgreSQL client
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          fi
+      - name: Iniciar Supabase local sin mostrar claves
+        run: |
+          if ! supabase start --exclude vector > /tmp/crono-supabase-start.log 2>&1; then
+            echo 'No se pudo iniciar Supabase local. Revisar el servicio Docker y las migraciones.'
+            exit 1
+          fi
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:auth:local
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-authenticated-report
+          path: /tmp/crono-auth-e2e-report/
+          retention-days: 7
+      - name: Detener Supabase local
+        if: always()
+        run: supabase stop > /tmp/crono-supabase-stop.log 2>&1 || true

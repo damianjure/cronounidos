@@ -106,3 +106,7 @@ npm run dev
 ```
 
 En este host se usó `NEXT_BUILD_DIR=.next-sprint2-delivery` y puerto 3100 para preview de producción. Cambiar nombre de outputs cuando la limpieza de carpetas workspace esté restringida; coverage en `/tmp` funciona. No hubo push ni deploy.
+
+### CI E2E autenticada (15/10/2026)
+
+Se agregó un job independiente `authenticated-local` que inicia Supabase local efímero en GitHub Actions, instala Chromium y ejecuta la suite autenticada desktop/mobile con fixture ficticio. El comando de inicio no imprime las claves temporales del stack; el runner de la suite rechaza endpoints fuera de `127.0.0.1:54321/54322`. Se suben reportes solo ante fallo y se detiene el stack al terminar. **Pendiente confirmar la primera ejecución verde en GitHub Actions**; no equivale a pruebas contra la Preview remota ni dispositivos físicos.
