@@ -105,11 +105,21 @@ No se hizo lanzamiento a Production. Cualquier dominio como `app.unidosparaservi
 
 ## 6. Verificación que falta sobre servicios reales
 
-- Supabase remoto independiente: las ocho migraciones, RLS estructural, bucket y advisors ya se verificaron. SMTP y plantillas SSR están configurados; la primera cuenta quedó confirmada y aprobada como administrador, y `/administracion` abrió en Chrome con su sesión. La invitación remota fue recibida y el alias figura con correo confirmado, pero permanece pendiente, sin aprobación ni grants. La API anónima denegó `profiles`/`meetings`, permitió solo la proyección vacía de `public_agenda` y no expuso `private`. Faltan ingreso/cambio de contraseña del alias, recuperación, renovación y PostgREST/RLS con JWT pendientes/aprobados y dos organizaciones. Localmente se probaron registro, confirmación, invitación y recuperación **hasta cambiar la contraseña** con plantillas SSR; las cuentas quedaron pendientes hasta aprobación. También se probaron PostgREST/JWT/RLS, aprobación y suspensión por UI, ACL por equipo y aislamiento de dos organizaciones.
+- Supabase remoto independiente: las ocho migraciones, RLS estructural, bucket y advisors ya se verificaron. SMTP y plantillas SSR están configurados; la primera cuenta quedó confirmada y aprobada como administrador, y `/administracion` abrió en Chrome con su sesión. La invitación remota fue recibida y el alias tiene correo confirmado; posteriormente apareció aprobado con un grant (ver actualización anterior), sin que Codex modificara ese estado. La API anónima denegó `profiles`/`meetings`, permitió solo la proyección vacía de `public_agenda` y no expuso `private`. Faltan ingreso/cambio de contraseña del alias, recuperación, renovación y PostgREST/RLS con JWT pendientes/aprobados y dos organizaciones. Localmente se probaron registro, confirmación, invitación y recuperación **hasta cambiar la contraseña** con plantillas SSR; las cuentas quedaron pendientes hasta aprobación. También se probaron PostgREST/JWT/RLS, aprobación y suspensión por UI, ACL por equipo y aislamiento de dos organizaciones.
 - Playwright CLI pasó **28/28** casos desktop/mobile con el Chrome instalado en este host usando `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`. Falta repetir en CI y automatizar E2E autenticadas de catálogos/Storage/cancelación; el navegador integrado sí verificó esos flujos localmente.
 - Instalación PWA en dispositivos reales iOS/Android, modo standalone y lectores de pantalla; el navegador integrado verificó manifest, worker, offline y teclado, pero no dispositivos reales.
 - Operaciones de administración con escritura y otros flujos Auth/RLS/Storage reales en la Preview, despliegue Production, advisors y observabilidad. No afirmar listo para producción hasta completar esas comprobaciones.
-- El directorio de personas/equipos/roles del Sprint 2 quedó desplegado en Preview desde `20a1d76` (`Ready`); Chrome mostró los formularios de administración en `/personas` con la organización aún vacía. Faltan operaciones de escritura E2E autenticadas de ese flujo; no se cargaron datos de prueba en Supabase remoto.
+- El directorio de personas/equipos/roles del Sprint 2 quedó desplegado en Preview desde `20a1d76` (`Ready`); Chrome mostró los formularios de administración en `/personas` con la organización aún vacía. Las escrituras E2E se probaron solo con Supabase local; no se cargaron datos de prueba en Supabase remoto.
+
+### Suite E2E autenticada local
+
+Con Colima/Docker, Supabase local (`supabase start --exclude vector` si corresponde), `psql` y Chrome/Chromium disponibles:
+
+```sh
+PLAYWRIGHT_CHROMIUM_EXECUTABLE='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' npm run test:e2e:auth:local
+```
+
+El script `scripts/run-auth-e2e-local.mjs` admite **solo** API `127.0.0.1:54321` y PostgreSQL `127.0.0.1:54322`; aborta si el destino no es local. Lee `supabase status` en memoria, construye el build `.next-auth-e2e`, y corre `playwright.authenticated.config.ts` en puerto 3101. No necesita `.env.local` ni revela claves en consola. El setup conserva una cuenta/organización ficticias `crono-e2e` para repetir pruebas; genera una clave aleatoria nueva por corrida. El teardown borra únicamente registros y archivos Storage de esa organización, no hace `db reset` ni toca otros proyectos. Las pruebas 8/8 desktop/mobile se aprobaron localmente; este comando todavía no forma parte de CI y no demuestra comportamiento de Supabase/Vercel remotos.
 
 ### Restricciones de artefactos de este host
 
