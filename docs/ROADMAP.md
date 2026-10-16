@@ -14,10 +14,10 @@ Crear/editar/publicar/duplicar reuniones con selección de datos y confirmacione
 ## Sprint 3 — Equipos y cobertura (cerrado funcionalmente; ver `SPRINT-3-CLOSURE.md`)
 Confirmaciones manuales individuales/masivas, rechazo y reemplazo con historial; conflictos con excepción; calendario mensual con indicador tipo+estado, roles críticos, próximas 3 reuniones; matriz de cobertura de equipos y roles.
 
-## Sprint 4 — Publicación y Modo en vivo
+## Sprint 4 — Publicación y Modo en vivo (en verificación; ver `SPRINT-4.md`)
 Mantener borrador y publicado separados; vista pública mínima. Operación con cronómetro, hora real vs prevista, ETA, estado en vivo y próximo bloque; sincronización y tolerancia a reconexiones.
 
-## Sprint 5 — Feedback y salida a producción
+## Sprint 5 — Feedback y salida a producción (iniciado; ver `SPRINT-5.md`)
 Cierre de reunión, generación idempotente de feedback a +10 min, avisos in-app y email cuando esté configurado; formulario breve y panel estrictamente admin. Pruebas RLS, mobile/desktop, performance y accesibilidad. Integrar Vercel y entorno de producción.
 
 ## Definition of Done

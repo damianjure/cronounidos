@@ -1,10 +1,10 @@
 # Preparación de servicios y entorno
 
-> Estado vigente 16/10/2026: Sprint 2 cerrado funcionalmente (`SPRINT-2-CLOSURE.md`). Veintitrés migraciones están aplicadas al proyecto independiente `ivmhgizuofxdvvvzdxnl`; la Preview protegida usa `SUPABASE_SECRET_KEY` solo en servidor para retirar archivos encolados. Sprint 3 cerrado funcionalmente (`SPRINT-3-CLOSURE.md`). La configuración Production, QA Auth/RLS remota integral y Sprints 4–5 siguen pendientes. Las entradas fechadas más abajo son historial de configuración.
+> Estado vigente 16/10/2026: Sprint 2 cerrado funcionalmente (`SPRINT-2-CLOSURE.md`). Veintiséis migraciones están aplicadas al proyecto independiente `ivmhgizuofxdvvvzdxnl`; la Preview protegida usa `SUPABASE_SECRET_KEY` solo en servidor para retirar archivos encolados. Sprint 3 cerrado funcionalmente (`SPRINT-3-CLOSURE.md`). La configuración Production, QA Auth/RLS remota integral y Sprints 4–5 siguen pendientes. Las entradas fechadas más abajo son historial de configuración.
 
 ## Estado actual
 
-Los Sprints 0–3 están implementados funcionalmente (ver cierres de Sprints 2 y 3). El usuario confirmó y creó un proyecto Supabase **independiente**, `Crono Unidos` (`ivmhgizuofxdvvvzdxnl`, São Paulo), el 15/10/2026. Se aplicaron allí las veintitrés migraciones versionadas, **sin seed**. Se creó la organización real `Unidos para Servir` (`unidos`) y el primer administrador ya tiene Auth confirmada, perfil y membresía aprobados y grant global; el acceso a `/administracion` se verificó en Chrome. También existe el proyecto Vercel independiente `crono-unidos`, conectado solo a `damianjure/cronounidos`, con variables públicas de Supabase, `APP_URL` y `SUPABASE_SECRET_KEY` configuradas solo en Preview. SMTP está configurado temporalmente para Preview; faltan pruebas Auth remotas completas, configuración de Production y los sprints restantes. No está lista para público. No usar **caja-chica**, **docu-media-us** ni ningún proyecto ajeno.
+Los Sprints 0–3 están implementados funcionalmente (ver cierres de Sprints 2 y 3). El usuario confirmó y creó un proyecto Supabase **independiente**, `Crono Unidos` (`ivmhgizuofxdvvvzdxnl`, São Paulo), el 15/10/2026. Se aplicaron allí las veintiséis migraciones versionadas, **sin seed**. Se creó la organización real `Unidos para Servir` (`unidos`) y el primer administrador ya tiene Auth confirmada, perfil y membresía aprobados y grant global; el acceso a `/administracion` se verificó en Chrome. También existe el proyecto Vercel independiente `crono-unidos`, conectado solo a `damianjure/cronounidos`, con variables públicas de Supabase, `APP_URL` y `SUPABASE_SECRET_KEY` configuradas solo en Preview. SMTP está configurado temporalmente para Preview; faltan pruebas Auth remotas completas, configuración de Production y los sprints restantes. No está lista para público. No usar **caja-chica**, **docu-media-us** ni ningún proyecto ajeno.
 
 ## 1. Entorno local
 
@@ -148,3 +148,9 @@ Las migraciones 19–23 no necesitan API keys ni variables nuevas. Ver `SPRINT-3
 ## Preferencia de Production confirmada — 16/10/2026
 
 El usuario eligió usar un subdominio de `damianjure.com` y crear un remitente exclusivo para Crono Unidos. Candidatos a verificar por disponibilidad: `crono.damianjure.com` y `crono@damianjure.com`. No se modificó DNS ni se habilitó Production; primero completar verificación del MVP, configurar identidad remitente en Brevo y validar dominio/redirects. El remitente temporal sigue autorizado solo en Preview.
+
+## Estado de ejecución y feedback — 16/10/2026
+
+Migraciones 24–26 aplicadas localmente y en `ivmhgizuofxdvvvzdxnl`, con dry-runs limitados a los archivos nuevos y sin seeds remotos. Realtime publica `meeting_live_state`; anon no ejecuta las RPCs de live ni lee el estado. El rol técnico `supabase_realtime_admin` recibe solo SELECT de `meeting_id` para descubrir el filtro, manteniendo RLS sin política para ese rol y sin grants de otras columnas. La comprobación previa al primer componente de feedback confirmó cero ejecuciones remotas existentes, por lo que no hubo participantes históricos que reconstruir.
+
+La captura privada de participantes de Sprint 5 ya existe, pero aún no hay generación de solicitudes +10 min, notificaciones, formulario, panel ni envío de email. No se debe interpretar la captura ni el texto de cierre de la consola como feedback funcionando. No hay variables nuevas de configuración para live/captura. El CI del arreglo de Realtime y la Preview se verifican antes de cerrar Sprint 4; ver `SPRINT-4.md` y `SPRINT-5.md`.

@@ -5,8 +5,8 @@
 Implementadas consola `/en-vivo/[id]`, transiciones autorizadas/versionadas/idempotentes, revisión publicada congelada, tiempos reales, cronómetro, adelanto/demora, ETA y recuperación por Realtime/polling. El cierre es explícito; no se da por ejecutado lo pendiente. El borrador puede guardarse, pero publicar o cancelar después de iniciar se rechaza atómicamente. El snapshot de ejecución no incluye notas ni personas; anon no puede leerlo.
 
 ### Pruebas locales
-- `npm run check`: lint, typecheck, **183 pruebas / 12 suites** y build correctos.
-- SQL/PGlite: 85 pruebas, incluidas 5 nuevas de transición, scopes, reloj, reintento, conflicto, cierre anticipado, espera, publicación congelada y RLS de estado/auditoría.
+- `npm run check`: lint, typecheck, **185 pruebas / 12 suites** (incluye captura inicial de Sprint 5 y regresión de metadatos Realtime) y build correctos.
+- SQL/PGlite: 87 pruebas, incluidas 5 nuevas de transición, scopes, reloj, reintento, conflicto, cierre anticipado, espera, publicación congelada y RLS de estado/auditoría.
 - Chrome autenticado desktop/mobile + Supabase local: **16/16**. Nuevos flujos usan dos contextos de navegador con Realtime activo y verifican un frame WebSocket de cambio de negocio de esa reunión (no deducen Realtime por velocidad de polling), desconectan uno, avanzan desde el otro, reconectan y verifican estado/cierre sin duplicación. Axe y overflow de consola; el comentario privado del plan no aparece en pantalla.
 - Cobertura de 12 módulos críticos configurados: 98,52% líneas, 92,22% ramas; cálculo live 100% líneas y 96,15% ramas. No cubre por sí sola UI remota ni infraestructura.
 - SQL lint: sin errores nuevos; conserva warnings anteriores del writer y duplicador.
@@ -28,3 +28,7 @@ El primer CI `38951934474` pasó foundation pero falló la E2E móvil esperando 
 El frame `system` expuso `invalid column for filter meeting_id`. Se verificó en PostgreSQL que `supabase_realtime_admin` no veía esa columna en `information_schema`, aunque authenticated sí tenía SELECT. El canal podía emitir SUBSCRIBED sin que PostgreSQL Changes estuviera listo. La migración `20261016191636_sprint4_realtime_metadata_access.sql` concede a ese rol interno **solo SELECT(meeting_id)**, sin política RLS de filas, sin permisos anon ni acceso a otras columnas. Nueva prueba SQL comprueba columna visible, cero filas y rechazo de otras columnas. No se reinició el proyecto ni se deshabilitó RLS.
 
 La consola establece explícitamente el JWT de sesión, pide confirmación de suscripción y escucha `system`: solo informa Realtime activo ante confirmación real de PostgreSQL Changes. Un rechazo conserva polling y muestra advertencia, no éxito falso. La E2E ahora inspecciona frames de negocio de la reunión y adjunta únicamente metadata de diagnóstico (nunca tokens). La pasada posterior volvió a 16/16 local; se repite nuevamente con todo el esquema aplicado antes de CI.
+
+## Estado al checkpoint
+
+Corrección y captura privada aplicadas local/remoto: **26 migraciones**, sin seeds ni fixtures remotos. `npm run check` verde con 185 pruebas; suite autenticada completa repetida sobre el esquema actualizado **16/16**, incluidos frames reales de PostgreSQL Changes. Base Chrome/PWA/drag **30/30**. Código correctivo `b11a56b` pusheado; CI nuevo pendiente. El fallo del CI anterior no se marca como resuelto hasta verificar el nuevo run. Sprint 4 sigue en verificación, no cerrado; Sprint 5 solo tiene captura de destinatarios.
