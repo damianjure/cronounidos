@@ -11,7 +11,7 @@ Migrations Supabase: org/personas/usuarios/equipos/roles/permisos; reuniones y v
 ## Sprint 2 — Editor (cerrado funcionalmente; ver `SPRINT-2-CLOSURE.md`)
 Crear/editar/publicar/duplicar reuniones con selección de datos y confirmaciones reseteadas; editor timeline drag táctil/mouse/teclado y recálculo; bloques configurables por instancia/plantilla con notas/URLs; A&A con músicos y canciones, mensajes, anuncios, recursos, subactividades paralelas.
 
-## Sprint 3 — Equipos y cobertura
+## Sprint 3 — Equipos y cobertura (en curso; ver `SPRINT-3.md`)
 Confirmaciones manuales individuales/masivas, rechazo y reemplazo con historial; conflictos con excepción; calendario mensual con indicador tipo+estado, roles críticos, próximas 3 reuniones; matriz de cobertura de equipos y roles.
 
 ## Sprint 4 — Publicación y Modo en vivo

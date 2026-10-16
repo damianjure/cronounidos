@@ -791,3 +791,71 @@ it("un enlace sin uso se actualiza y elimina solo mediante RPC estrecha", async 
   await rpc(admin, "delete_unlinked_url_resource", [resource]);
   expect((await db.query("select id from public.resources where id=$1", [resource])).rows).toHaveLength(0);
 });
+
+it("confirmaciones masivas son por persona, con scope de equipo, atomicidad e historial", async () => {
+  const leader = id(977);
+  await db.query("insert into auth.users(id,email) values($1,'leader-confirm@example.invalid')", [leader]);
+  await db.query("update public.profiles set approved_at=now() where user_id=$1", [leader]);
+  await db.query("insert into public.memberships(org_id,user_id,status) values($1,$2,'approved')", [org,leader]);
+  await db.query("insert into public.permission_grants(org_id,subject_user_id,team_id,permission) values($1,$2,$3,'confirm'),($1,$2,$3,'read_people')", [org,leader,id(201)]);
+  const own = emptyBlock("Bloque confirmación A"); own.teamId=id(201);
+  own.notes="Nota que no debe filtrarse";
+  own.responsibles=[{assignmentId:null,personId:id(101),teamId:id(201),roleId:id(301)}];
+  const second=emptyBlock("Bloque confirmación B"); second.teamId=id(202);
+  second.responsibles=[{assignmentId:null,personId:id(101),teamId:id(202),roleId:null}];
+  let meeting=snapshotSchema.parse(await rpc(admin,"create_editor_meeting",[org,metadata,null]));
+  meeting=snapshotSchema.parse(await rpc(admin,"publish_editor_snapshot",[meeting.meetingId,meeting.version,metadata,[own,second]]));
+  type Response={assignments:{id:string;personId:string;status:string;respondedAt:string|null;history:unknown[]}[]};
+  const initial=await rpc(member,"get_meeting_confirmations",[meeting.meetingId]) as Response;
+  expect(initial.assignments).toHaveLength(2);
+  expect(JSON.stringify(initial)).not.toContain(own.notes);
+  const expected=initial.assignments.map(({id,status,respondedAt})=>({id,status,respondedAt}));
+  const scoped=await rpc(leader,"get_meeting_confirmations",[meeting.meetingId]) as Response;
+  expect(scoped.assignments).toHaveLength(1);
+  await expect(rpc(leader,"respond_assignments",[meeting.meetingId,id(101),"confirmed",expected])).rejects.toThrow(/Forbidden/);
+  await expect(rpc(otherAdmin,"respond_assignments",[meeting.meetingId,id(101),"confirmed",expected])).rejects.toThrow(/Forbidden/);
+  expect((await rpc(member,"get_meeting_confirmations",[meeting.meetingId]) as Response).assignments.every(a=>a.status==='pending')).toBe(true);
+  expect(await rpc(member,"respond_assignments",[meeting.meetingId,id(101),"confirmed",expected])).toBe(2);
+  await expect(rpc(member,"respond_assignments",[meeting.meetingId,id(101),"unavailable",expected])).rejects.toThrow(/Confirmation conflict/);
+  const confirmed=await rpc(member,"get_meeting_confirmations",[meeting.meetingId]) as Response;
+  const current=confirmed.assignments.map(({id,status,respondedAt})=>({id,status,respondedAt}));
+  expect(await rpc(member,"respond_assignments",[meeting.meetingId,id(101),"confirmed",current])).toBe(0);
+  expect(await rpc(member,"respond_assignments",[meeting.meetingId,id(101),"unavailable",current])).toBe(2);
+  const rejected=await rpc(member,"get_meeting_confirmations",[meeting.meetingId]) as Response;
+  expect(rejected.assignments.every(a=>a.status==='unavailable' && a.history.length===3)).toBe(true);
+  await expect(actor(null,"select public.get_meeting_confirmations($1) result",[meeting.meetingId])).rejects.toThrow(/permission denied/);
+  await expect(rpc(member,"respond_assignments",[meeting.meetingId,id(102),"confirmed",current])).rejects.toThrow(/Forbidden/);
+  await expect(rpc(admin,"respond_assignments",[meeting.meetingId,id(101),null,current])).rejects.toThrow(/Invalid confirmations/);
+});
+
+it("confirmar no filtra borradores ni acepta asignaciones retiradas del plan publicado", async () => {
+  const block=emptyBlock("Confirmación publicada");
+  block.teamId=id(201);
+  block.responsibles=[{assignmentId:null,personId:id(101),teamId:id(201),roleId:id(301)}];
+  let meeting=snapshotSchema.parse(await rpc(admin,"create_editor_meeting",[org,metadata,null]));
+  meeting=snapshotSchema.parse(await rpc(admin,"save_editor_snapshot",[meeting.meetingId,meeting.version,metadata,[block]]));
+  const assignmentId=meeting.blocks[0].responsibles[0].assignmentId!;
+  await expect(rpc(member,"get_meeting_confirmations",[meeting.meetingId])).rejects.toThrow(/Forbidden/);
+  await expect(rpc(member,"confirm_assignment",[assignmentId,"confirmed"])).rejects.toThrow(/Forbidden/);
+  expect(await rpc(admin,"get_meeting_confirmations",[meeting.meetingId])).toHaveProperty("assignments");
+  meeting=snapshotSchema.parse(await rpc(admin,"publish_editor_snapshot",[meeting.meetingId,meeting.version,metadata,meeting.blocks]));
+  const without=meeting.blocks.map(b=>({...b,responsibles:[]}));
+  const draft=await save(meeting,without);
+  // Published remains operational while editing a draft that removes the person.
+  await rpc(member,"confirm_assignment",[assignmentId,"confirmed"]);
+  await rpc(admin,"publish_editor_snapshot",[draft.meetingId,draft.version,metadata,draft.blocks]);
+  await expect(rpc(member,"confirm_assignment",[assignmentId,"unavailable"])).rejects.toThrow(/Forbidden/);
+  expect((await db.query<{status:string}>("select status from public.assignments where id=$1",[assignmentId])).rows[0].status).toBe("confirmed");
+});
+
+it("validación de lotes rechaza duplicados, valores ausentes y reuniones canceladas", async () => {
+  const block=emptyBlock("Lote de validación"); block.responsibles=[{assignmentId:null,personId:id(101),teamId:id(201),roleId:null}];
+  let meeting=snapshotSchema.parse(await rpc(admin,"create_editor_meeting",[org,metadata,null]));
+  meeting=snapshotSchema.parse(await rpc(admin,"publish_editor_snapshot",[meeting.meetingId,meeting.version,metadata,[block]]));
+  const expected={id:meeting.blocks[0].responsibles[0].assignmentId,status:"pending",respondedAt:null};
+  for(const invalid of [null,[],[expected,expected],[{id:expected.id,status:"pending"}]]) {
+    await expect(rpc(member,"respond_assignments",[meeting.meetingId,id(101),"confirmed",invalid])).rejects.toThrow(/Invalid confirmations/);
+  }
+  await rpc(admin,"cancel_editor_meeting",[meeting.meetingId,meeting.version]);
+  await expect(rpc(member,"respond_assignments",[meeting.meetingId,id(101),"confirmed",[expected]])).rejects.toThrow(/Meeting closed/);
+});

@@ -20,13 +20,14 @@ export default async function Dashboard() {
       <section className="panel">
         <h2>Primeros pasos</h2>
         <p className="muted">
-          El editor de reuniones se implementa en el Sprint 2. Ya podés
-          consultar el directorio y administrar accesos según tus permisos.
+          Ya podés preparar reuniones en el editor, consultar el directorio y responder asignaciones según tus permisos. El calendario y la cobertura siguen en desarrollo.
         </p>
         <p className="footer-note">
           {access.state === "approved" ? access.user.email : ""}
         </p>
         <div className="auth-links">
+          <Link href="/cronograma">Cronograma</Link>
+          <Link href="/confirmaciones">Confirmaciones</Link>
           <Link href="/personas">Personas y equipos</Link>
           <Link href="/administracion">Administrar accesos</Link>
         </div>

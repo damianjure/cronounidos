@@ -20,6 +20,7 @@ const navigation = [
   { href: "/cronograma", label: "Cronograma", icon: LayoutList },
   { href: "/calendario", label: "Calendario", icon: CalendarDays },
   { href: "/personas", label: "Personas y equipos", icon: Users },
+  { href: "/confirmaciones", label: "Confirmaciones", icon: ShieldCheck },
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ];
 export function Shell({ children }: { children: React.ReactNode }) {

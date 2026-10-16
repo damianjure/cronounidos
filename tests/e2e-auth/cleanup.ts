@@ -3,6 +3,9 @@ import { createClient } from "@supabase/supabase-js";
 
 export default async function cleanup() {
   const dbUrl = process.env.E2E_DB_URL!;
+  if (!/^postgresql?:\/\/[^@]+@127\.0\.0\.1:54322\/postgres(?:\?.*)?$/.test(dbUrl)
+    || process.env.E2E_SUPABASE_URL !== "http://127.0.0.1:54321")
+    throw new Error("El teardown solo puede limpiar el fixture en Supabase local.");
   let orgId: string;
   try {
     orgId = execFileSync("psql", [dbUrl, "-v", "ON_ERROR_STOP=1", "-Atc", "select id from public.organizations where slug='crono-e2e'"], { encoding: "utf8" }).trim();
@@ -28,7 +31,10 @@ export default async function cleanup() {
     "messages", "resources", "songs", "announcements", "block_types", "series", "meeting_types",
     "team_memberships", "roles", "teams", "people",
   ];
+  // Only teardown bypasses immutable-history triggers, transaction-locally, for
+  // this fictitious org. Business assertions have already run under normal RLS.
   const sql = `begin;
+set local session_replication_role=replica;
 update public.meetings set status='cancelled', published_revision_id=null, draft_revision_id=null where org_id='${orgId}'::uuid;
 ${tables.map((table) => `delete from public.${table} where org_id='${orgId}'::uuid;`).join("\n")}
 commit;`;

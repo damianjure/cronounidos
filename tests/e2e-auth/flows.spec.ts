@@ -1,6 +1,8 @@
 import { expect, request as apiRequest, test, type Page } from "@playwright/test";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import { emptyBlock, snapshotSchema } from "../../src/lib/editor/model";
+import AxeBuilder from "@axe-core/playwright";
 
 const email = "e2e-admin@cronounidos.invalid";
 
@@ -275,4 +277,51 @@ test("edición parcial: notas, campos y enlaces no exponen otros bloques", async
   await assignments.getByRole("button", { name: "Confirmar quitar responsable" }).click();
   await expect(page.getByRole("status")).toContainText("Responsables actualizados en borrador");
   await expect(assignments).toContainText("No hay responsables de este equipo");
+});
+
+
+test("confirmaciones: lote por persona, rechazo individual e historial sin sobrescribir respuesta obsoleta", async ({ page }, info) => {
+  const client = createClient(process.env.E2E_SUPABASE_URL!, process.env.E2E_PUBLISHABLE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } });
+  const auth = await client.auth.signInWithPassword({ email, password: process.env.E2E_TEST_PASSWORD! });
+  expect(auth.error).toBeNull();
+  const membership = await client.from("memberships").select("org_id").eq("user_id", auth.data.user!.id).eq("status", "approved").single();
+  expect(membership.error).toBeNull();
+  const orgId = membership.data!.org_id;
+  const name = `Persona confirmación ${info.project.name}-${Date.now()}`;
+  const person = await client.from("people").insert({ org_id: orgId, first_name: name, last_name: "Ficticia" }).select("id").single();
+  expect(person.error).toBeNull();
+  const blocks = ["Primer rol ficticio", "Segundo rol ficticio"].map(title => ({
+    ...emptyBlock(title), responsibles: [{ assignmentId: null, personId: person.data!.id, teamId: null, roleId: null }],
+  }));
+  const metadata = { title: `Confirmaciones ${info.project.name}`, date: "2026-11-20", startLocalTime: "10:00", timezone: "America/Argentina/Buenos_Aires", meetingTypeId: null, seriesId: null };
+  const created = await client.rpc("create_editor_meeting", { p_org: orgId, p_metadata: metadata, p_template: null });
+  expect(created.error).toBeNull();
+  const meeting = snapshotSchema.parse(created.data);
+  const published = await client.rpc("publish_editor_snapshot", { p_meeting: meeting.meetingId, p_expected_version: meeting.version, p_metadata: metadata, p_blocks: blocks });
+  expect(published.error).toBeNull();
+  await login(page);
+  const url = `/confirmaciones?meeting=${meeting.meetingId}`;
+  await page.goto(url);
+  const group = page.getByRole("region", { name: `Asignaciones de ${name} Ficticia` });
+  await expect(group).toBeVisible();
+  await group.getByRole("button", { name: "Confirmar todos", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Respuestas guardadas");
+  await expect(group.locator("li > p > strong")).toHaveText(["Confirmado", "Confirmado"]);
+  const stale = await page.context().newPage();
+  await stale.goto(url);
+  const first = group.locator("li").filter({ has: page.getByRole("heading", { name: "Primer rol ficticio" }) });
+  await first.getByRole("button", { name: "No disponible", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Respuestas guardadas");
+  await expect(first.locator(":scope > p > strong")).toHaveText("No disponible");
+  await expect(group.locator("li").filter({ has: page.getByRole("heading", { name: "Segundo rol ficticio" }) }).locator(":scope > p > strong")).toHaveText("Confirmado");
+  await stale.getByRole("button", { name: "Todos pendientes", exact: true }).click();
+  await expect(stale.locator("p.notice.error[role=alert]")).toContainText("La respuesta cambió");
+  await page.reload();
+  await expect(first.locator(":scope > p > strong")).toHaveText("No disponible");
+  await expect(group.locator("li").filter({ has: page.getByRole("heading", { name: "Segundo rol ficticio" }) }).locator(":scope > p > strong")).toHaveText("Confirmado");
+  await first.locator("summary").click();
+  await expect(first.locator("details")).toContainText("antes: Confirmado");
+  expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await stale.close();
 });

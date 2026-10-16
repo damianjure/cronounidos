@@ -17,6 +17,7 @@ export default function More() {
           <Users />
           Personas y equipos
         </Link>
+        <Link href="/confirmaciones"><ShieldCheck />Confirmaciones</Link>
         <Link href="/administracion">
           <ShieldCheck />
           Administración
