@@ -158,3 +158,10 @@ La captura privada de participantes de Sprint 5 ya existe, pero aún no hay gene
 ### Núcleo de feedback local — 16/10/2026
 
 Local: **28 migraciones**. Remoto independiente: **26**; todavía NO se enviaron las migraciones 27–28. No hay variables nuevas para el despacho SQL ni para avisos internos. `crono-unidos-feedback-dispatch` está activo cada minuto en el PostgreSQL local; se verificó `cron.job_run_details.status = succeeded` y `return_message = 1 row` (ejecución del dispatcher, no evidencia de email ni aún E2E de entrega). Las comprobaciones reales de privilegios dieron `authenticated` sin EXECUTE del dispatcher y `anon` sin EXECUTE de envío de feedback. Configuración de correo de aplicación, interfaz y verificación remota siguen pendientes. Nunca usar el remitente temporal fuera de Preview.
+
+
+### Feedback in-app y scheduler aplicados — 16/10/2026
+
+Estado actualizado: **29 migraciones local y remoto** independiente `ivmhgizuofxdvvvzdxnl`. Las migraciones 27–29 se aplicaron después de dry-run limitado a esos archivos, sin seeds/fixtures remotos. Job `crono-unidos-feedback-dispatch` activo cada minuto con historial remoto `succeeded`; no requiere variables nuevas, tokens de cron ni navegador abierto. Los grants comprobados siguen denegando dispatcher a authenticated y envío de feedback a anon.
+
+Interfaz `/feedback`, aviso en `/inicio` y panel `/feedback/admin` implementados y probados en Chrome local desktop/mobile. CI/Preview de `4150ea1` deben verificarse antes de afirmar entrega remota. Email de feedback NO configurado: falta outbox/transporte de aplicación, credencial API segura de Brevo y remitente exclusivo validado. No reutilizar automáticamente la configuración SMTP de Supabase Auth ni exponer claves en documentación. Subdominio/remitente candidatos siguen sin DNS cambiado y Production deshabilitada.
