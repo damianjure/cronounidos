@@ -81,7 +81,7 @@ async function transition(
 beforeAll(async () => {
   db = new PGlite();
   await db.exec(
-    `create role anon nologin;create role authenticated nologin;create schema auth;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb default '{}');create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;`,
+    `create role supabase_realtime_admin nologin;create role anon nologin;create role authenticated nologin;create schema auth;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb default '{}');create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;`,
   );
   for (const file of readdirSync("supabase/migrations").sort())
     await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));
@@ -236,3 +236,26 @@ it("RLS y grants protegen tablas, incluso con un JWT vÃ¡lido de otra organizaciÃ
     rpc(operator, "transition_live", [m.meetingId, 1, null, "next"]),
   ).rejects.toThrow(/Invalid/);
 });
+
+it('captura participantes del publicado y responsables sin duplicar roles ni perder reemplazados',async()=>{
+ const meta={title:'Participantes ficticios',date:'2029-10-25',startLocalTime:'10:00',timezone:'America/Argentina/Buenos_Aires',meetingTypeId:null,seriesId:null};
+ const person='10000000-0000-4000-8000-000000000101',replacement='10000000-0000-4000-8000-000000000102',hidden='10000000-0000-4000-8000-000000000103',team='10000000-0000-4000-8000-000000000201',role='10000000-0000-4000-8000-000000000301';
+ await db.exec(`insert into public.people(id,org_id,first_name,last_name) values('${hidden}','${org}','Persona borrador','Ficticia');update public.profiles set org_id='${org}',person_id='${person}' where user_id='${scoped}';insert into public.team_memberships(org_id,team_id,person_id) values('${org}','${team}','${replacement}') on conflict do nothing;insert into public.permission_grants(org_id,subject_user_id,team_id,permission) values('${org}','${scoped}','${team}','assign'),('${org}','${scoped}','${team}','confirm') on conflict do nothing;`);
+ let m=snapshotSchema.parse(await rpc(admin,'create_editor_meeting',[org,meta,null]));
+ const block={...emptyBlock('Ficticia'),teamId:team,durationSeconds:600,responsibles:[{assignmentId:null,personId:person,teamId:team,roleId:role}]};
+ m=snapshotSchema.parse(await rpc(admin,'publish_editor_snapshot',[m.meetingId,m.version,meta,[block,{...block,clientKey:crypto.randomUUID()}]]));
+ await rpc(admin,'configure_meeting_position',[m.meetingId,m.version,team,role,'required',1]);
+ const positions=await db.query<{id:string}>('select id from public.meeting_required_positions where meeting_id=$1',[m.meetingId]);
+ await rpc(admin,'staff_meeting_position',[positions.rows[0].id,m.version+1,person,null,null,null]);
+ m=snapshotSchema.parse(await rpc(admin,'get_editor_snapshot',[m.meetingId]));
+ await rpc(admin,'save_editor_snapshot',[m.meetingId,m.version,meta,[{...block,responsibles:[{assignmentId:null,personId:hidden,teamId:team,roleId:role}]}]]);
+ let live=await transition(await snapshot(operator,m.meetingId),'start');
+ const before=await db.query<{person_id:string|null;user_id:string|null}>('select person_id,user_id from private.live_participants where meeting_id=$1',[m.meetingId]);
+ expect(before.rows).toHaveLength(2);expect(before.rows.filter(p=>p.person_id===person)).toHaveLength(1);expect(before.rows.some(p=>p.person_id===hidden)).toBe(false);expect(before.rows.filter(p=>p.user_id===scoped)).toHaveLength(1);expect(before.rows.filter(p=>p.user_id===operator)).toHaveLength(1);
+ const staffing=await db.query<{version:number;id:string;status:string}>('select m.version,a.id,a.status from public.meetings m join public.assignments a on a.meeting_id=m.id where m.id=$1 and a.position_id=$2 and a.replaced_by_id is null',[m.meetingId,positions.rows[0].id]);
+ await rpc(admin,'staff_meeting_position',[positions.rows[0].id,staffing.rows[0].version,replacement,staffing.rows[0].id,staffing.rows[0].status,null]);
+ live=await transition(live,'next');live=await transition(live,'close');
+ const final=await db.query<{person_id:string|null;user_id:string|null}>('select person_id,user_id from private.live_participants where meeting_id=$1',[m.meetingId]);
+ expect(final.rows.filter(p=>p.person_id===person)).toHaveLength(1);expect(final.rows.filter(p=>p.person_id===replacement)).toHaveLength(1);expect(final.rows.filter(p=>p.user_id===operator)).toHaveLength(1);expect(final.rows.some(p=>p.person_id===hidden)).toBe(false);
+});
+
