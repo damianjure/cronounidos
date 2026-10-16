@@ -900,3 +900,18 @@ h1 {
   .calendar-panel nav { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:4px; width:100%; margin-top:12px; }
   .calendar-panel nav .button { white-space:normal; padding:8px 4px; text-align:center; }
 }
+.calendar-add { display:flex; align-items:center; justify-content:center; min-height:44px; min-width:44px; }
+.calendar-day summary { min-height:44px; overflow-wrap:anywhere; cursor:pointer; }
+.coverage-mobile { display:none; }
+.coverage-desktop table { border-collapse:collapse; width:100%; }
+.coverage-desktop th,.coverage-desktop td { padding:12px; border:1px solid var(--line); min-width:140px; text-align:left; }
+[data-coverage] { border-left:4px solid #64748b; padding-left:8px; }
+[data-coverage="red"] { border-left-color:#b42318; }
+[data-coverage="yellow"] { border-left-color:#ad6500; }
+[data-coverage="green"] { border-left-color:#15803d; }
+@media(max-width:767px) { .coverage-desktop{display:none;} .coverage-mobile{display:grid;gap:16px;margin-top:20px;} }
+.shell[data-preview="mobile"] .coverage-desktop { display:none; }
+.shell[data-preview="mobile"] .coverage-mobile { display:grid;gap:16px;margin-top:20px; }
+
+.coverage-desktop { margin-top:20px; background:var(--panel); border-radius:var(--radius); }
+.coverage-desktop td[data-coverage] { border-left-width:4px; }

@@ -326,10 +326,298 @@ test("confirmaciones: lote por persona, rechazo individual e historial sin sobre
   await stale.close();
   await page.goto("/calendario?month=2026-11");
   await expect(page.getByRole("heading", { name: "noviembre de 2026" })).toBeVisible();
+  const daySelector=page.locator('section.calendar-day[aria-label="2026-11-20"] > details > summary');
+  if(await daySelector.count()) await daySelector.click();
   await expect(page.getByRole("region", { name: "Calendario mensual" }).getByRole("link", { name: new RegExp(`${metadata.title}.*Sin puestos requeridos`) })).toBeVisible();
   await expect(page.getByRole("link", { name: "Mes siguiente" })).toHaveAttribute("href", "/calendario?month=2026-12");
   await expect(page.getByRole("region", { name: "Próximas tres reuniones" }).locator(".member-list > li")).toHaveCount(3);
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: `/tmp/crono-calendar-${info.project.name}.png`, fullPage: true });
+});
+
+test("Sprint 3: puestos, reemplazos, conflictos, matriz y sesiones de integrante/responsable", async ({
+  page,
+  browser,
+}, info) => {
+  const { execFileSync } = await import("node:child_process");
+  const client = createClient(
+    process.env.E2E_SUPABASE_URL!,
+    process.env.E2E_PUBLISHABLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+  const auth = await client.auth.signInWithPassword({
+    email,
+    password: process.env.E2E_TEST_PASSWORD!,
+  });
+  expect(auth.error).toBeNull();
+  const membership = await client
+    .from("memberships")
+    .select("org_id")
+    .eq("user_id", auth.data.user!.id)
+    .single();
+  expect(membership.error).toBeNull();
+  const org = membership.data!.org_id;
+  const suffix = `${info.project.name}-${Date.now()}`;
+  const team = await client
+    .from("teams")
+    .insert({ org_id: org, name: `Equipo puestos ${suffix}` })
+    .select("id")
+    .single();
+  expect(team.error).toBeNull();
+  const role = await client
+    .from("roles")
+    .insert({ org_id: org, team_id: team.data!.id, name: `Operador ${suffix}` })
+    .select("id")
+    .single();
+  expect(role.error).toBeNull();
+  const people = await client
+    .from("people")
+    .insert([
+      {
+        org_id: org,
+        first_name: `Integrante ${suffix}`,
+        last_name: "Ficticio",
+      },
+      { org_id: org, first_name: `Reemplazo ${suffix}`, last_name: "Ficticio" },
+    ])
+    .select("id,first_name");
+  expect(people.error).toBeNull();
+  const [person, replacement] = people.data!;
+  expect(
+    (
+      await client
+        .from("team_memberships")
+        .insert(
+          people.data!.map((p) => ({
+            org_id: org,
+            team_id: team.data!.id,
+            person_id: p.id,
+          })),
+        )
+    ).error,
+  ).toBeNull();
+  const metadata = {
+    title: `Puestos ${suffix}`,
+    date: "2029-03-18",
+    startLocalTime: "10:00",
+    timezone: "America/Argentina/Buenos_Aires",
+    meetingTypeId: null,
+    seriesId: null,
+  };
+  const created = await client.rpc("create_editor_meeting", {
+    p_org: org,
+    p_metadata: metadata,
+    p_template: null,
+  });
+  expect(created.error).toBeNull();
+  let meeting = snapshotSchema.parse(created.data);
+  const block = {
+    ...emptyBlock("Actividad de prueba"),
+    durationSeconds: 600,
+    responsibles: [
+      {
+        personId: person.id,
+        teamId: team.data!.id,
+        roleId: role.data!.id,
+        assignmentId: null,
+      },
+    ],
+    subactivities: [
+      {
+        clientKey: crypto.randomUUID(),
+        title: "Paralela",
+        teamId: team.data!.id,
+        personId: person.id,
+        offsetSeconds: 0,
+        durationSeconds: 300,
+        notes: "",
+        fieldSchema: [],
+        customFields: {},
+      },
+    ],
+  };
+  const published = await client.rpc("publish_editor_snapshot", {
+    p_meeting: meeting.meetingId,
+    p_expected_version: meeting.version,
+    p_metadata: metadata,
+    p_blocks: [block],
+  });
+  expect(published.error).toBeNull();
+  meeting = snapshotSchema.parse(published.data);
+  await login(page);
+  await page.goto(`/cronograma/${meeting.meetingId}/puestos`);
+  await expect(
+    page.getByRole("heading", { name: "Solapamientos", exact: true }),
+  ).toBeVisible();
+  const exception = page
+    .locator("form")
+    .filter({ has: page.locator('textarea[name="reason"]') })
+    .first();
+  await exception
+    .locator("textarea")
+    .fill("Actividad compatible supervisada para prueba");
+  await exception.getByRole("button", { name: "Registrar excepción" }).click();
+  await expect(
+    page.getByText("Excepción registrada:", { exact: false }),
+  ).toBeVisible();
+  const add = page
+    .locator("section.panel")
+    .filter({
+      has: page.getByRole("heading", {
+        name: `Equipo puestos ${suffix}`,
+        exact: true,
+      }),
+    })
+    .locator("details")
+    .filter({
+      has: page.locator("summary", { hasText: "Agregar puestos requeridos" }),
+    });
+  await add.locator("summary").click();
+  await add.locator('select[name="roleId"]').selectOption(role.data!.id);
+  await add.locator('select[name="priority"]').selectOption("critical");
+  await add
+    .getByRole("button", { name: "Agregar puestos", exact: true })
+    .click();
+  const position = page
+    .locator(".member-list > li")
+    .filter({
+      has: page.getByRole("heading", {
+        name: `Operador ${suffix} #1 · Crítico`,
+        exact: true,
+      }),
+    });
+  await expect(position).toContainText("Vacante");
+  await position.locator("summary", { hasText: "Asignar persona" }).click();
+  await position.locator('select[name="personId"]').selectOption(person.id);
+  await position.locator('input[name="ack"]').last().check();
+  await position.getByRole("button", { name: "Guardar asignación" }).click();
+  await expect(position).toContainText("Pendiente");
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  const service = createClient(
+    process.env.E2E_SUPABASE_URL!,
+    process.env.E2E_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+  const identities = [];
+  for (const kind of ["member", "leader"]) {
+    const address = `e2e-${kind}-${suffix}@cronounidos.invalid`;
+    const user = await service.auth.admin.createUser({
+      email: address,
+      password: process.env.E2E_TEST_PASSWORD!,
+      email_confirm: true,
+    });
+    expect(user.error).toBeNull();
+    const userId = user.data.user!.id;
+    identities.push({ kind, address, id: userId });
+    expect(
+      [org, userId, person.id, team.data!.id].every((id) =>
+        /^[0-9a-f-]{36}$/i.test(id),
+      ),
+    ).toBe(true);
+    execFileSync(
+      "psql",
+      [
+        process.env.E2E_DB_URL!,
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-q",
+        "-c",
+        `begin;update public.profiles set approved_at=now(),org_id='${org}',person_id=${kind === "member" ? `'${person.id}'` : "null"} where user_id='${userId}';insert into public.memberships(org_id,user_id,status) values('${org}','${userId}','approved');${kind === "leader" ? `insert into public.permission_grants(org_id,subject_user_id,team_id,permission) values('${org}','${userId}','${team.data!.id}','assign'),('${org}','${userId}','${team.data!.id}','read_people'),('${org}','${userId}','${team.data!.id}','confirm');` : ""}commit;`,
+      ],
+      { stdio: "pipe" },
+    );
+  }
+  for (const identity of identities) {
+    const context = await browser.newContext({
+      baseURL: new URL(page.url()).origin,
+      viewport: page.viewportSize()!,
+    });
+    try {
+      const tab = await context.newPage();
+      await tab.goto("/ingresar");
+      await tab
+        .getByRole("textbox", { name: "Correo electrónico" })
+        .fill(identity.address);
+      await tab
+        .getByRole("textbox", { name: "Contraseña" })
+        .fill(process.env.E2E_TEST_PASSWORD!);
+      await tab.getByRole("button", { name: "Ingresar a mi cuenta" }).click();
+      await expect(tab).toHaveURL(/\/inicio$/);
+      await tab.goto(`/confirmaciones?meeting=${meeting.meetingId}`);
+      await tab
+        .getByRole("button", { name: "Confirmar todos", exact: true })
+        .click();
+      await expect(tab.getByRole("status")).toContainText(
+        "Respuestas guardadas",
+      );
+      await tab.goto(`/cronograma/${meeting.meetingId}/puestos`);
+      if (identity.kind === "member")
+        await expect(
+          tab.getByText(
+            "Necesitás asignación y lectura de personas para gestionar puestos.",
+          ),
+        ).toBeVisible();
+      else {
+        await expect(
+          tab.getByRole("heading", { name: "Solapamientos", exact: true }),
+        ).toBeVisible();
+        await expect(
+          tab.locator("summary", { hasText: "Agregar puestos requeridos" }),
+        ).toHaveCount(0);
+      }
+    } finally {
+      await context.close();
+    }
+  }
+  await page.reload();
+  await position.locator("summary", { hasText: "Reemplazar persona" }).click();
+  await position
+    .locator('select[name="personId"]')
+    .selectOption(replacement.id);
+  await position.locator('input[name="ack"]').last().check();
+  await position.getByRole("button", { name: "Guardar asignación" }).click();
+  await expect(position).toContainText(
+    `${replacement.first_name} Ficticio · Pendiente`,
+  );
+  await position
+    .locator("summary", { hasText: "Historial de personas" })
+    .click();
+  await expect(position).toContainText("Confirmado · Reemplazado");
+  await page.goto("/cobertura?month=2029-03");
+  await expect(
+    page.getByRole("heading", { name: "Matriz de cobertura", exact: true }),
+  ).toBeVisible();
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: `/tmp/crono-matrix-${info.project.name}.png`,
+    fullPage: true,
+  });
+  await page.goto("/calendario?month=2029-03");
+  await page
+    .getByRole("link", { name: "Crear reunión el 2029-03-01", exact: true })
+    .click();
+  await expect(page.locator('input[name="date"]')).toHaveValue("2029-03-01");
 });

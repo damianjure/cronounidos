@@ -7,7 +7,9 @@ export function NewMeetingForm({
   types,
   series,
   templates,
+  defaultDate,
 }: {
+  defaultDate?: string;
   types: CatalogItem[];
   series: CatalogItem[];
   templates: CatalogItem[];
@@ -25,7 +27,7 @@ export function NewMeetingForm({
         </label>
         <label className="field">
           Fecha
-          <input type="date" name="date" required />
+          <input type="date" name="date" required defaultValue={defaultDate} />
         </label>
         <label className="field">
           Hora de inicio

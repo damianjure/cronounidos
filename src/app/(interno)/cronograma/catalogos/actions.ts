@@ -8,10 +8,13 @@ import { fieldDefinition, snapshotSchema } from "@/lib/editor/model";
 import { templateBlocks } from "@/lib/editor/templates";
 
 const nameSchema = z.string().trim().min(2).max(120);
-const fieldSchema = z.array(fieldDefinition).max(50).superRefine((fields, ctx) => {
-  if (new Set(fields.map((field) => field.key)).size !== fields.length)
-    ctx.addIssue({ code: "custom", message: "Campos repetidos." });
-});
+const fieldSchema = z
+  .array(fieldDefinition)
+  .max(50)
+  .superRefine((fields, ctx) => {
+    if (new Set(fields.map((field) => field.key)).size !== fields.length)
+      ctx.addIssue({ code: "custom", message: "Campos repetidos." });
+  });
 const idSchema = z.uuid();
 const versionSchema = z.coerce.number().int().positive();
 
@@ -90,11 +93,21 @@ export async function saveTemplate(form: FormData) {
   if (!snapshot.success) redirect("/cronograma/catalogos?error=reunion");
   if (snapshot.data.version !== version.data)
     redirect("/cronograma/catalogos?error=conflicto");
-  const { error: insertError } = await a.client.from("meeting_templates").insert({
-    org_id: a.orgId,
-    name: name.data,
-    definition_json: { blocks: templateBlocks(snapshot.data) },
-  });
+  const { data: requiredPositions, error: positionsError } = await a.client.rpc(
+    "template_position_definition",
+    { p_meeting: id.data, p_version: snapshot.data.version },
+  );
+  if (positionsError) redirect("/cronograma/catalogos?error=conflicto");
+  const { error: insertError } = await a.client
+    .from("meeting_templates")
+    .insert({
+      org_id: a.orgId,
+      name: name.data,
+      definition_json: {
+        blocks: templateBlocks(snapshot.data),
+        requiredPositions,
+      },
+    });
   if (insertError) redirect("/cronograma/catalogos?error=guardar");
   done("plantilla");
 }
@@ -132,10 +145,18 @@ export async function replaceTemplateDefinition(form: FormData) {
   const snapshot = snapshotSchema.safeParse(source);
   if (sourceError || !snapshot.success)
     redirect("/cronograma/catalogos?error=reunion");
+  const { data: requiredPositions, error: positionsError } = await a.client.rpc(
+    "template_position_definition",
+    { p_meeting: meetingId.data, p_version: snapshot.data.version },
+  );
+  if (positionsError) redirect("/cronograma/catalogos?error=conflicto");
   const { data, error } = await a.client
     .from("meeting_templates")
     .update({
-      definition_json: { blocks: templateBlocks(snapshot.data) },
+      definition_json: {
+        blocks: templateBlocks(snapshot.data),
+        requiredPositions,
+      },
       definition_version: version.data + 1,
     })
     .eq("org_id", a.orgId)
@@ -166,7 +187,13 @@ export async function applyTemplateSelected(form: FormData) {
   const version = versionSchema.safeParse(form.get("version"));
   const confirmed = form.get("confirm") === "yes";
   const rawTargets = form.getAll("targets");
-  if (!id.success || !version.success || !confirmed || rawTargets.length < 1 || rawTargets.length > 20)
+  if (
+    !id.success ||
+    !version.success ||
+    !confirmed ||
+    rawTargets.length < 1 ||
+    rawTargets.length > 20
+  )
     redirect("/cronograma/catalogos?error=datos");
   const targets = rawTargets.map((raw) => {
     const [meetingId, rawVersion] = String(raw).split(":");
@@ -175,7 +202,10 @@ export async function applyTemplateSelected(form: FormData) {
     if (!meeting.success || !revision.success) return null;
     return { id: meeting.data, version: revision.data };
   });
-  if (targets.some((target) => !target) || new Set(targets.map((target) => target?.id)).size !== targets.length)
+  if (
+    targets.some((target) => !target) ||
+    new Set(targets.map((target) => target?.id)).size !== targets.length
+  )
     redirect("/cronograma/catalogos?error=datos");
   const { error } = await a.client.rpc("apply_template_selected", {
     p_template: id.data,
@@ -184,7 +214,9 @@ export async function applyTemplateSelected(form: FormData) {
   });
   if (error) {
     const conflict = /conflict|draft|closed/i.test(error.message);
-    redirect(`/cronograma/catalogos?error=${conflict ? "conflicto" : "guardar"}`);
+    redirect(
+      `/cronograma/catalogos?error=${conflict ? "conflicto" : "guardar"}`,
+    );
   }
   revalidatePath("/cronograma");
   revalidatePath("/");

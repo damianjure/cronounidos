@@ -21,7 +21,7 @@ export async function respondAssignments(form: FormData) {
     p_meeting: value.meetingId, p_person: value.personId, p_status: value.status, p_expected: value.expected,
   });
   if (error) redirect(`${url}&error=${error.message.includes("conflict") ? "conflicto" : "guardar"}`);
-  for (const path of ["/confirmaciones", "/inicio", "/cronograma", "/calendario"])
+  for (const path of ["/confirmaciones", "/inicio", "/cronograma", "/calendario", "/cobertura", `/cronograma/${value.meetingId}/puestos`])
     revalidatePath(path);
   redirect(`${url}&ok=1`);
 }

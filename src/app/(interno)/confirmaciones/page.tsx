@@ -31,6 +31,7 @@ export default async function Confirmations({ searchParams }: {
   const meetings = confirmationMeetingList.parse(data);
   const selected = query.meeting ?? meetings[0]?.id;
   let snapshot = null;
+  let canStaff=false;
   if (selected) {
     const response = await access.client.rpc("get_meeting_confirmations", { p_meeting: selected });
     if (response.error) {
@@ -38,6 +39,9 @@ export default async function Confirmations({ searchParams }: {
       throw new Error("No se pudieron consultar las asignaciones.");
     }
     snapshot = confirmationSnapshot.parse(response.data);
+    const staff=await access.client.rpc("get_meeting_staffing",{p_meeting:selected});
+    if(staff.error&&!staff.error.message.includes("Forbidden")) throw new Error("No se pudieron verificar los permisos de puestos.");
+    canStaff=!staff.error;
   }
   return <>
     <div className="page-heading"><div><h1>Confirmaciones</h1><p className="muted">Respondé tus asignaciones o gestioná las de los equipos que tenés autorizados.</p></div></div>
@@ -48,6 +52,7 @@ export default async function Confirmations({ searchParams }: {
     {!snapshot && <section className="panel empty"><h2>No hay asignaciones para responder</h2><p className="muted">Solo se muestran asignaciones vigentes y autorizadas. Las de un borrador inicial requieren permiso de planificación; después de publicar, integrantes pueden responder sus propias asignaciones.</p></section>}
     {snapshot && <>
       <h2>{snapshot.title} · {snapshot.date}</h2>
+      {canStaff&&<p><Link href={`/cronograma/${snapshot.meetingId}/puestos`}>Gestionar puestos, reemplazos y solapamientos</Link></p>}
       <p className="notice">Las respuestas corresponden al plan vigente. Si la reunión ya está publicada, un borrador de edición no cambia ese plan. “No disponible” conserva el rechazo y deja el puesto sin cubrir; no asigna un reemplazo automáticamente.</p>
       {groupByPerson(snapshot.assignments).map(person => <section key={person.personId} className="panel" style={{ marginBottom: 20 }} aria-label={`Asignaciones de ${person.name}`}>
         <h3>{person.name}</h3>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadSnapshot, loadCatalog } from "@/lib/editor/server";
 import { MeetingEditor } from "@/components/editor/meeting-editor";
@@ -12,5 +13,14 @@ export default async function Editor({
     loadSnapshot(id),
     loadCatalog(),
   ]);
-  return <MeetingEditor initial={snapshot} catalog={catalog} />;
+  return (
+    <>
+      <p>
+        <Link href={`/cronograma/${id}/puestos`}>
+          Gestionar puestos y reemplazos
+        </Link>
+      </p>
+      <MeetingEditor initial={snapshot} catalog={catalog} />
+    </>
+  );
 }
