@@ -54,3 +54,9 @@ Otros requisitos aprobados:
 - El despacho es una transacción privada con exclusión mutua y restricciones únicas; usa el reloj del servidor y `closed_at + 10 minutos`. No acepta un reloj ni destinatario del navegador. Supabase Cron lo ejecuta cada minuto: nunca antes de los diez minutos, con hasta un minuto de latencia normal de sondeo.
 - El envío de respuesta es inmutable. Un reintento con idéntico contenido es idempotente; otro contenido se rechaza. Máximo 500 caracteres de comentario, categorías cerradas. Los avisos no incluyen texto ni categoría de feedback.
 - La migración del scheduler da NOTICE si `pg_cron` no existe (por ejemplo PGlite); esto NO equivale a scheduler operativo. Cada entorno real requiere verificar job activo e historial de ejecución. No se declara entrega de correo: proveedor/outbox siguen pendientes.
+
+## Correo de feedback: worker Next.js, outbox y cambio de entorno
+
+Se conserva el backend Next.js/Supabase aprobado: un worker POST de servidor usa una capacidad de máquina acotada para reclamar/finalizar filas privadas; Supabase Cron + pg_net lo despierta con un secreto independiente de Vault. No se agrega FastAPI, Edge Function ni Vercel Cron de minuto sujeto al plan. Brevo recibe texto genérico, sin contenido de feedback. Canal deshabilitado por defecto y separado del SMTP de Auth.
+
+La idempotencia externa tiene TTL, no duración infinita: payload/key congelados, leases y reintentos auditados dentro de diez minutos; luego revisión sin reenvío automático. El cambio Preview→Production reveló un caso importante: congelar remitente/origen por sí solo permitiría enviar un retry antiguo con el remitente temporal. Se bloquea ese payload ante configuración distinta y queda `configuration_changed` para revisión, sin mutarlo ni enviarlo desde Production. Ver `EMAIL.md` para configuración y límites verificados.

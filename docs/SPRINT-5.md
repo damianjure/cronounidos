@@ -1,6 +1,6 @@
 # Sprint 5 — Feedback y salida a producción
 
-## En curso: feedback in-app implementado; email y Production pendientes
+## En curso: feedback y worker de correo implementados; activación y Production pendientes
 
 El cierre efectivo y la revisión congelada provienen de Sprint 4. No se considera suficiente mostrar un formulario ni ejecutar un job manual: hay que probar scheduler, permisos, idempotencia, entrega in-app y, cuando esté configurado, email.
 
@@ -48,6 +48,24 @@ Ambas migraciones se probaron primero localmente y después se aplicaron al remo
 
 ### Trabajo pendiente
 
-1. Verificar CI/Preview de la interfaz y flujo autenticado remoto, sin copiar fixtures locales a producción.
-2. Implementar outbox/transporte email de aplicación con Brevo, reintentos e idempotencia, configuración segura y remitente exclusivo. Auth SMTP ya configurado no equivale a este transporte. No se enviaron correos de feedback ni se declara ese canal operativo.
+1. Verificar CI del worker de correo y completar flujo autenticado remoto, sin copiar fixtures locales a producción. La UI de feedback ya pasó CI; el worker tiene una nueva ejecución en curso.
+2. Activar y probar realmente el outbox/transporte Brevo ya implementado: API key segura, remitente verificado, secreto de worker/Vault y protección de Preview. Auth SMTP no equivale a este transporte. No se enviaron correos de feedback ni se declara ese canal operativo.
 3. Preparar/verificar subdominio y remitente elegidos, redirects y variables de Production, QA remota de roles/Auth/invitación y pruebas PWA físicas. No lanzar Production antes de estos gates.
+
+
+## Cuarto componente: worker de correo preparado — 16/10/2026
+
+- Commits `2e05a3f` (outbox/scheduler) y `2482a23` (worker Brevo). **33 migraciones local/remoto**, sin fixtures ni seeds remotos. `pg_net` no estaba instalado en el remoto: migración 32 lo habilitó en `extensions`, sin cambiar exposición de esquemas.
+- Outbox privado, destinatario Auth confirmado/aprobado, payload congelado, leases, intentos auditados y reintentos con la misma clave/payload. Expiración conservadora de diez minutos y revisión manual, no reenvío infinito. Migración 33 retiene payloads de otro remitente/origen; no permite arrastrar el remitente temporal de Preview a Production.
+- `POST /api/internal/feedback-email` protegido por secreto independiente; no lo ejecutan cookies de administrador. Brevo recibe contenido genérico y login requerido, nunca feedback ni título de reunión. Respuestas del endpoint: solo contadores o errores sanitizados. Canal deshabilitado por defecto; no se agregó cron de Vercel ni se cambió facturación.
+- CI previo de la UI (`38956144905` y `38956229545`) **success**. Nueva Preview del worker **Ready**, `https://crono-unidos-bkysc93pi-damianjure-5692s-projects.vercel.app`: POST sin secreto devolvió **401 / unauthorized**, incluso usando bypass autorizado de Deployment Protection; `/feedback` sin sesión devolvió **307 a ingreso**. CI nuevo `38968856850` sigue en curso en este checkpoint.
+
+### Pruebas de esta entrega
+
+- `npm run check`: lint/typecheck/**212 pruebas / 15 suites**/build verdes. SQL/PGlite **91/91**; nuevas regresiones cubren reclamos simultáneos, acks antiguos, ventana expirada, destinatario congelado, suspensión/no confirmación, solicitud respondida y configuración de otro entorno.
+- Transportes HTTP y Vault/net simulados en pruebas unitarias/SQL: respuestas 201, duplicado, 400, 401, 429, 5xx, timeout, JSON inválido, ID inválido y fallo de persistencia de ack; ningún fallo se cuenta como éxito. Estas pruebas **no son envíos reales a Brevo**.
+- Chrome autenticado **18/18**, con POST del worker rechazado incluso desde sesión admin y `Accept-Profile: net` rechazado con JWT de integrante. Base PWA/drag/privacidad **30/30** repetida.
+- Cobertura de 15 módulos críticos configurados: **98,86% líneas / 93,60% ramas**; módulo de transporte 100% líneas, 98,41% ramas. No es cobertura de toda la UI ni verificación de entrega física. Runtime audit **0 vulnerabilidades**. SQL lint `public,private` sin errores.
+- Comprobaciones remotas: anon/authenticated no leen Vault; authenticated no reclama mail, `service_role` sí; anon no hace ack. Job email activo cada minuto, pero sin secretos retorna NULL y **no hace HTTP**. PostgREST rechazó `net` con 406/PGRST106 antes/después de habilitar la extensión. GraphQL remoto no está habilitado; en local la introspección no incluyó tipos de red. Advisor de seguridad sin ERROR, con avisos intencionales ya documentados y Leaked Password Protection aún pendiente.
+
+Falta cargar credenciales y verificar remitente, conectar el callback protegido y probar recepción real. Configuración/seguridad/diagnóstico en **`EMAIL.md`**. Se consultó al propietario cómo abrir las claves API de Brevo, expresamente sin pegarlas en el chat. Sprint 5 permanece abierto por estos gates y Production.

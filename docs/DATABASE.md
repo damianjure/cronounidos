@@ -61,3 +61,7 @@ Diseño inicial; Codex debe escribir migraciones SQL versionadas y pruebas RLS. 
 ### Implementación física de feedback (Sprint 5, parcial)
 
 `private.live_participants` conserva la identidad capturada; `private.feedback_requests` conserva destinatario, vencimiento y estado; `private.meeting_feedback` guarda categoría/comentario/autor sin acceso de tabla para clientes. La política de SELECT de respuestas es exclusivamente administrativa, además del guard del RPC `admin_meeting_feedback`. `public.personal_notifications` expone únicamente avisos propios a miembros aprobados (RLS), sin texto de feedback. Los RPC personales son `my_feedback_requests` (solo estado) y `submit_meeting_feedback` (una respuesta, reintento idéntico permitido). Ningún cliente puede ejecutar `private.dispatch_due_feedback`.
+
+### Outbox de correo (Sprint 5)
+
+`private.feedback_email_outbox` mantiene una fila por solicitud, payload mínimo congelado, estado/lease/ventana de reintentos y resultado de proveedor. `private.feedback_email_attempts` audita cada intento y ack por lease. `private.feedback_email_dispatches` conserva IDs/fechas de llamadas HTTP del scheduler, no headers ni comentarios. RLS activo y sin grants de tabla para clientes. Los RPCs `claim_feedback_emails` / `finish_feedback_email` son exclusivamente de máquina `service_role`, no de administradores con sesión de usuario. La identidad de email viene de Auth confirmado y aprobación vigente; no de metadata editable. Ver `EMAIL.md` antes de activar el canal.

@@ -165,3 +165,10 @@ Local: **28 migraciones**. Remoto independiente: **26**; todavía NO se enviaron
 Estado actualizado: **29 migraciones local y remoto** independiente `ivmhgizuofxdvvvzdxnl`. Las migraciones 27–29 se aplicaron después de dry-run limitado a esos archivos, sin seeds/fixtures remotos. Job `crono-unidos-feedback-dispatch` activo cada minuto con historial remoto `succeeded`; no requiere variables nuevas, tokens de cron ni navegador abierto. Los grants comprobados siguen denegando dispatcher a authenticated y envío de feedback a anon.
 
 Interfaz `/feedback`, aviso en `/inicio` y panel `/feedback/admin` implementados y probados en Chrome local desktop/mobile. CI/Preview de `4150ea1` deben verificarse antes de afirmar entrega remota. Email de feedback NO configurado: falta outbox/transporte de aplicación, credencial API segura de Brevo y remitente exclusivo validado. No reutilizar automáticamente la configuración SMTP de Supabase Auth ni exponer claves en documentación. Subdominio/remitente candidatos siguen sin DNS cambiado y Production deshabilitada.
+
+
+### Worker Brevo preparado, no activado — 16/10/2026
+
+Estado actualizado: **33 migraciones en local y remoto** independiente, incluyendo outbox, scheduler de correo, habilitación de pg_net faltante y guard de cambio de entorno. Preview del worker Ready; POST sin secreto devuelve 401, sin operar la cola. `net` sigue fuera del Data API (406/PGRST106), Vault no es legible por anon/authenticated. El job email está registrado, pero sin secretos de Vault no despacha HTTP. No se cargó API key de Brevo ni se habilitó envío real; SMTP de Auth no cambia.
+
+Seguir **[EMAIL.md](EMAIL.md)** para cargar API key y secreto independiente como Secrets de Vercel, verificar remitente, configurar los nombres dedicados en Vault y probar recepción. Mantener `FEEDBACK_EMAIL_ENABLED=false` hasta acordar la prueba y revisar la cola. Production permanece deshabilitada; el remitente temporal solo está autorizado para Preview y no se reutiliza automáticamente en otro entorno.
