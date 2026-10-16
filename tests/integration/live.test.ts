@@ -81,7 +81,7 @@ async function transition(
 beforeAll(async () => {
   db = new PGlite();
   await db.exec(
-    `create role supabase_realtime_admin nologin;create role anon nologin;create role authenticated nologin;create schema auth;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb default '{}');create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;`,
+    `create role service_role nologin;create role supabase_realtime_admin nologin;create role anon nologin;create role authenticated nologin;create schema auth;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,raw_user_meta_data jsonb default '{}');create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;`,
   );
   for (const file of readdirSync("supabase/migrations").sort())
     await db.exec(readFileSync("supabase/migrations/" + file, "utf8"));
@@ -595,5 +595,264 @@ it("solicitudes sin cuenta se vinculan solo por identidad aprobada y no se trans
     ).toBeGreaterThan(0);
   } finally {
     await db.exec("reset role;rollback");
+  }
+});
+
+it("outbox privado: exclusión por lease, reintento estable y límite de idempotencia", async () => {
+  await db.exec("update private.feedback_email_outbox set status='cancelled'");
+  await db.query(
+    "update auth.users set email_confirmed_at=clock_timestamp() where id=$1",
+    [operator],
+  );
+  async function prepare() {
+    const m = await meeting();
+    const live = await transition(
+      await snapshot(operator, m.meetingId),
+      "start",
+    );
+    await transition(live, "close");
+    await db.query(
+      "update public.meeting_live_state set closed_at=clock_timestamp()-interval '11 minutes' where meeting_id=$1",
+      [m.meetingId],
+    );
+    await db.exec("select private.dispatch_due_feedback()");
+    const request = await db.query<{ id: string }>(
+      "select id from private.feedback_requests where meeting_id=$1 and user_id=$2",
+      [m.meetingId, operator],
+    );
+    return request.rows[0].id;
+  }
+  async function machine(name: string, args: unknown[]) {
+    await db.exec("set role service_role");
+    try {
+      return (
+        await db.query<{ data: unknown }>(
+          `select public.${name}(${args.map((_, i) => "$" + (i + 1)).join(",")}) data`,
+          args,
+        )
+      ).rows[0].data;
+    } finally {
+      await db.exec("reset role");
+    }
+  }
+  type Mail = {
+    requestId: string;
+    leaseToken: string;
+    recipient: string;
+    sender: string;
+    origin: string;
+  };
+  const claim = async (
+    sender = "crono@example.invalid",
+    origin = "https://crono.example.invalid",
+  ) => (await machine("claim_feedback_emails", [sender, origin, 5])) as Mail[];
+  const request = await prepare();
+  for (const user of [null, admin, operator, reader]) {
+    await expect(
+      rpc(user, "claim_feedback_emails", [
+        "crono@example.invalid",
+        "https://crono.example.invalid",
+        5,
+      ]),
+    ).rejects.toThrow(/permission denied/);
+    await expect(
+      rpc(user, "finish_feedback_email", [
+        request,
+        crypto.randomUUID(),
+        "accepted",
+        "ficticio",
+      ]),
+    ).rejects.toThrow(/permission denied/);
+  }
+  const batch = await claim();
+  expect(batch).toHaveLength(1);
+  const first = batch[0];
+  expect(first.requestId).toBe(request);
+  expect(Object.keys(first).sort()).toEqual([
+    "leaseToken",
+    "origin",
+    "recipient",
+    "requestId",
+    "sender",
+  ]);
+  expect(await claim()).toEqual([]);
+  await expect(
+    machine("finish_feedback_email", [
+      request,
+      first.leaseToken,
+      "accepted",
+      null,
+    ]),
+  ).rejects.toThrow(/message ID required/);
+  await machine("finish_feedback_email", [
+    request,
+    first.leaseToken,
+    "uncertain",
+    null,
+  ]);
+  expect(await claim()).toEqual([]);
+  await db.query(
+    "update private.feedback_email_outbox set next_attempt_at=clock_timestamp()-interval '1 second' where request_id=$1",
+    [request],
+  );
+  const second = (
+    await claim("rotado@example.invalid", "https://other.example.invalid")
+  )[0];
+  expect(second.sender).toBe(first.sender);
+  expect(second.origin).toBe(first.origin);
+  expect(second.recipient).toBe(first.recipient);
+  expect(second.leaseToken).not.toBe(first.leaseToken);
+  await expect(
+    machine("finish_feedback_email", [
+      request,
+      first.leaseToken,
+      "accepted",
+      "ficticio",
+    ]),
+  ).rejects.toThrow(/Stale mail lease/);
+  await machine("finish_feedback_email", [
+    request,
+    second.leaseToken,
+    "duplicate",
+    null,
+  ]);
+  await machine("finish_feedback_email", [
+    request,
+    second.leaseToken,
+    "duplicate",
+    null,
+  ]);
+  expect(await claim()).toEqual([]);
+  const audit = await db.query<{ outcome: string }>(
+    "select outcome from private.feedback_email_attempts where request_id=$1 order by attempt",
+    [request],
+  );
+  expect(audit.rows.map((r) => r.outcome)).toEqual(["uncertain", "duplicate"]);
+  const expired = await prepare();
+  const leased = (await claim())[0];
+  expect(leased.requestId).toBe(expired);
+  await db.query(
+    "update private.feedback_email_outbox set first_attempt_at=clock_timestamp()-interval '11 minutes',lease_until=clock_timestamp()-interval '1 second' where request_id=$1",
+    [expired],
+  );
+  expect(await claim()).toEqual([]);
+  expect(
+    (
+      await db.query<{ status: string; last_error: string }>(
+        "select status,last_error from private.feedback_email_outbox where request_id=$1",
+        [expired],
+      )
+    ).rows[0],
+  ).toEqual({ status: "review", last_error: "expired_window" });
+  const blocked = await prepare();
+  await db.query("update auth.users set email_confirmed_at=null where id=$1", [
+    operator,
+  ]);
+  expect(await claim()).toEqual([]);
+  await db.query(
+    "update auth.users set email_confirmed_at=clock_timestamp() where id=$1",
+    [operator],
+  );
+  await db.query(
+    "update public.memberships set status='suspended' where user_id=$1 and org_id=$2",
+    [operator, org],
+  );
+  expect(await claim()).toEqual([]);
+  await db.query(
+    "update public.memberships set status='approved' where user_id=$1 and org_id=$2",
+    [operator, org],
+  );
+  await rpc(operator, "submit_meeting_feedback", [blocked, "all_good", null]);
+  expect(await claim()).toEqual([]);
+  expect(
+    (
+      await db.query<{ status: string }>(
+        "select status from private.feedback_email_outbox where request_id=$1",
+        [blocked],
+      )
+    ).rows[0].status,
+  ).toBe("cancelled");
+  const changed = await prepare();
+  const held = (await claim())[0];
+  expect(held.requestId).toBe(changed);
+  await machine("finish_feedback_email", [
+    changed,
+    held.leaseToken,
+    "configuration_changed",
+    null,
+  ]);
+  expect(
+    (
+      await db.query<{ status: string; last_error: string }>(
+        "select status,last_error from private.feedback_email_outbox where request_id=$1",
+        [changed],
+      )
+    ).rows[0],
+  ).toEqual({ status: "review", last_error: "configuration_changed" });
+});
+
+it("scheduler de correo no hace HTTP sin Vault válido y solo usa payload vacío", async () => {
+  expect(
+    (
+      await db.query<{ result: unknown }>(
+        "select private.kick_feedback_email_worker() result",
+      )
+    ).rows[0].result,
+  ).toBeNull();
+  await db.exec(
+    `create schema vault;create schema net;create table vault.decrypted_secrets(name text primary key,decrypted_secret text);create table private.fake_feedback_http(id bigserial primary key,url text,headers jsonb,body jsonb);create function net.http_post(url text,body jsonb default '{}',params jsonb default '{}',headers jsonb default '{}',timeout_milliseconds integer default 2000) returns bigint language plpgsql as $$declare result bigint;begin insert into private.fake_feedback_http(url,headers,body) values(url,headers,body) returning id into result;return result;end$$;`,
+  );
+  expect(
+    (
+      await db.query<{ result: unknown }>(
+        "select private.kick_feedback_email_worker() result",
+      )
+    ).rows[0].result,
+  ).toBeNull();
+  await db.exec(
+    "insert into vault.decrypted_secrets values('crono_unidos_feedback_worker_url','http://crono.example.invalid/api/internal/feedback-email'),('crono_unidos_feedback_worker_secret','fictitious-machine-secret-only-1234567890')",
+  );
+  await expect(
+    db.exec("select private.kick_feedback_email_worker()"),
+  ).rejects.toThrow(/Invalid feedback worker configuration/);
+  await db.exec(
+    "update vault.decrypted_secrets set decrypted_secret='https://crono.example.invalid/api/internal/feedback-email' where name='crono_unidos_feedback_worker_url'",
+  );
+  const m = await meeting();
+  const started = await transition(
+    await snapshot(operator, m.meetingId),
+    "start",
+  );
+  await transition(started, "close");
+  await db.query(
+    "update public.meeting_live_state set closed_at=clock_timestamp()-interval '11 minutes' where meeting_id=$1",
+    [m.meetingId],
+  );
+  await db.exec(
+    "select private.dispatch_due_feedback();select private.kick_feedback_email_worker()",
+  );
+  const requests = await db.query<{
+    url: string;
+    headers: Record<string, string>;
+    body: unknown;
+  }>("select url,headers,body from private.fake_feedback_http");
+  expect(requests.rows).toHaveLength(1);
+  expect(requests.rows[0]).toEqual({
+    url: "https://crono.example.invalid/api/internal/feedback-email",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer fictitious-machine-secret-only-1234567890",
+    },
+    body: {},
+  });
+  await db.exec(
+    `set role authenticated;select set_config('request.jwt.claim.sub','${operator}',false)`,
+  );
+  try {
+    await expect(
+      db.exec("select private.kick_feedback_email_worker()"),
+    ).rejects.toThrow(/permission denied/);
+  } finally {
+    await db.exec("reset role");
   }
 });
