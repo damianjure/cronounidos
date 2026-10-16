@@ -621,3 +621,30 @@ test("Sprint 3: puestos, reemplazos, conflictos, matriz y sesiones de integrante
     .click();
   await expect(page.locator('input[name="date"]')).toHaveValue("2029-03-01");
 });
+
+test('en vivo: dos dispositivos sincronizan, recuperan desconexión y cierran explícitamente',async({page,browser},info)=>{
+ const client=createClient(process.env.E2E_SUPABASE_URL!,process.env.E2E_PUBLISHABLE_KEY!,{auth:{persistSession:false,autoRefreshToken:false}});
+ const auth=await client.auth.signInWithPassword({email,password:process.env.E2E_TEST_PASSWORD!});expect(auth.error).toBeNull();
+ const membership=await client.from('memberships').select('org_id').eq('user_id',auth.data.user!.id).single();expect(membership.error).toBeNull();
+ const metadata={title:`En vivo ${info.project.name}`,date:'2029-10-20',startLocalTime:'10:00',timezone:'America/Argentina/Buenos_Aires',meetingTypeId:null,seriesId:null};
+ const created=await client.rpc('create_editor_meeting',{p_org:membership.data!.org_id,p_metadata:metadata,p_template:null});expect(created.error).toBeNull();const meeting=snapshotSchema.parse(created.data);
+ const published=await client.rpc('publish_editor_snapshot',{p_meeting:meeting.meetingId,p_expected_version:meeting.version,p_metadata:metadata,p_blocks:['Primera en vivo','Segunda en vivo','Tercera en vivo'].map(name=>({...emptyBlock(name),durationSeconds:600,notes:'Texto privado fuera de la consola'}))});expect(published.error).toBeNull();
+ await login(page);await page.goto(`/en-vivo/${meeting.meetingId}`);
+ await expect(page.getByRole('status')).toContainText('Realtime activa');
+ const other=await browser.newContext({baseURL:new URL(page.url()).origin,storageState:await page.context().storageState(),viewport:page.viewportSize()!});
+ try {
+  const second=await other.newPage();await second.goto(`/en-vivo/${meeting.meetingId}`);await expect(second.getByRole('status')).toContainText('Realtime activa');
+  await page.getByRole('button',{name:'Iniciar reunión y primera actividad',exact:true}).click();
+  await expect(page.getByRole('region',{name:'Actividad en curso'}).getByRole('heading',{name:'Primera en vivo',exact:true})).toBeVisible();
+  // No manual refresh on the second device: change must arrive via Realtime.
+  await expect(second.getByRole('region',{name:'Actividad en curso'}).getByRole('heading',{name:'Primera en vivo',exact:true})).toBeVisible({timeout:7000});
+  const stale=await client.rpc('transition_live',{p_meeting:meeting.meetingId,p_version:0,p_request:crypto.randomUUID(),p_command:'next'});expect(stale.error?.message).toContain('version conflict');
+  await page.context().setOffline(true);await expect(page.getByRole('status')).toContainText('Sin conexión');await expect(page.getByRole('button',{name:'Finalizar y avanzar',exact:true})).toBeDisabled();
+  await second.getByRole('button',{name:'Finalizar y avanzar',exact:true}).click();await expect(second.getByRole('region',{name:'Actividad en curso'}).getByRole('heading',{name:'Segunda en vivo',exact:true})).toBeVisible();
+  await page.context().setOffline(false);await expect(page.getByRole('region',{name:'Actividad en curso'}).getByRole('heading',{name:'Segunda en vivo',exact:true})).toBeVisible();
+  expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect(await page.locator('body').innerText()).not.toContain('Texto privado');
+  await page.locator('summary',{hasText:'Cerrar reunión'}).click();await page.getByRole('checkbox',{name:'Confirmo el cierre definitivo de la reunión.'}).check();await page.getByRole('button',{name:'Cerrar reunión definitivamente',exact:true}).click();await expect(page.getByRole('heading',{name:'Reunión cerrada',exact:true})).toBeVisible();await expect(second.getByRole('heading',{name:'Reunión cerrada',exact:true})).toBeVisible();await expect(page.getByText('No ejecutada',{exact:true})).toHaveCount(1);
+  await page.reload();await expect(page.getByRole('heading',{name:'Reunión cerrada',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Iniciar reunión y primera actividad',exact:true})).toHaveCount(0);
+  await page.screenshot({path:`/tmp/crono-live-${info.project.name}.png`,fullPage:true});
+ }finally {await page.context().setOffline(false);await other.close();}
+});

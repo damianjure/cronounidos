@@ -19,6 +19,7 @@ export default async function Editor({
         <Link href={`/cronograma/${id}/puestos`}>
           Gestionar puestos y reemplazos
         </Link>
+        {" · "}<Link href={`/en-vivo/${id}`}>Modo en vivo</Link>
       </p>
       <MeetingEditor initial={snapshot} catalog={catalog} />
     </>

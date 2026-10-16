@@ -66,6 +66,7 @@ export default async function Schedule({ searchParams }: { searchParams: Promise
                   <Link href={`/cronograma/${m.id}/equipos/${team.id}`}>Contenido de {team.name}</Link>
                 </Button>
               ))}
+              {m.published_revision_id && m.status !== "cancelled" && <Button asChild variant="outline"><Link href={`/en-vivo/${m.id}`}>{m.status === "finished" ? "Ver ejecución" : "Modo en vivo"}</Link></Button>}
               {permission.data && m.status !== "cancelled" && m.status !== "finished" && <CancelMeetingForm id={m.id} version={m.version} />}
             </li>
           ))}
