@@ -12,6 +12,7 @@ export default defineConfig({
       include: [
         "src/lib/domain.ts",
         "src/lib/live/model.ts",
+        "src/lib/feedback/model.ts",
         "src/lib/confirmations/model.ts",
         "src/lib/calendar/model.ts",
         "src/lib/staffing/model.ts",

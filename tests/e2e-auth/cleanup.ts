@@ -82,6 +82,9 @@ export default async function cleanup() {
   // this fictitious org. Business assertions have already run under normal RLS.
   const sql = `begin;
 set local session_replication_role=replica;
+delete from public.personal_notifications where org_id='${orgId}'::uuid;
+delete from private.meeting_feedback where org_id='${orgId}'::uuid;
+delete from private.feedback_requests where org_id='${orgId}'::uuid;
 delete from private.live_participants where meeting_id in(select id from public.meetings where org_id='${orgId}'::uuid);
 delete from private.meeting_live_events where meeting_id in(select id from public.meetings where org_id='${orgId}'::uuid);
 delete from private.block_executions where meeting_id in(select id from public.meetings where org_id='${orgId}'::uuid);

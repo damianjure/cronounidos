@@ -5,6 +5,7 @@ import {
   ShieldCheck,
   LogIn,
   CalendarDays,
+  MessageSquare,
 } from "lucide-react";
 export default function More() {
   return (
@@ -17,7 +18,14 @@ export default function More() {
           <Users />
           Personas y equipos
         </Link>
-        <Link href="/confirmaciones"><ShieldCheck />Confirmaciones</Link>
+        <Link href="/confirmaciones">
+          <ShieldCheck />
+          Confirmaciones
+        </Link>
+        <Link href="/feedback">
+          <MessageSquare />
+          Mi feedback
+        </Link>
         <Link href="/administracion">
           <ShieldCheck />
           Administración

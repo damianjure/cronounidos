@@ -9,6 +9,7 @@ import {
   LayoutList,
   Monitor,
   MoreHorizontal,
+  MessageSquare,
   Settings,
   ShieldCheck,
   Smartphone,
@@ -21,6 +22,7 @@ const navigation = [
   { href: "/calendario", label: "Calendario", icon: CalendarDays },
   { href: "/personas", label: "Personas y equipos", icon: Users },
   { href: "/confirmaciones", label: "Confirmaciones", icon: ShieldCheck },
+  { href: "/feedback", label: "Mi feedback", icon: MessageSquare },
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ];
 export function Shell({ children }: { children: React.ReactNode }) {
