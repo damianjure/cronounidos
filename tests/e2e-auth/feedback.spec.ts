@@ -92,6 +92,11 @@ test("feedback: scheduler real, aviso propio, respuesta y privacidad administrat
     ).error,
   ).toBeNull();
   await login(page, "e2e-admin@cronounidos.invalid");
+  const workerDenied = await page
+    .context()
+    .request.post("/api/internal/feedback-email");
+  expect(workerDenied.status()).toBe(401);
+  expect(await workerDenied.json()).toEqual({ error: "unauthorized" });
   await page.goto(`/en-vivo/${m.meetingId}`);
   await page
     .getByRole("button", {
@@ -206,6 +211,12 @@ test("feedback: scheduler real, aviso propio, respuesta y privacidad administrat
       p_meeting: m.meetingId,
     });
     expect(privateRead.error?.message).toContain("Forbidden");
+    const hiddenQueue = await memberClient
+      .schema("net")
+      .from("http_request_queue")
+      .select("id")
+      .limit(1);
+    expect(hiddenQueue.error?.code).toBe("PGRST106");
     const ownState = await memberClient.rpc("my_feedback_requests", {
       p_org: orgId,
     });

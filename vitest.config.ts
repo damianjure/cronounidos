@@ -13,6 +13,8 @@ export default defineConfig({
         "src/lib/domain.ts",
         "src/lib/live/model.ts",
         "src/lib/feedback/model.ts",
+        "src/lib/feedback/email.ts",
+        "src/app/api/internal/feedback-email/route.ts",
         "src/lib/confirmations/model.ts",
         "src/lib/calendar/model.ts",
         "src/lib/staffing/model.ts",
