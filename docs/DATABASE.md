@@ -50,3 +50,10 @@ Diseño inicial; Codex debe escribir migraciones SQL versionadas y pruebas RLS. 
 - Agenda pública consulta SOLO actividades, inicio calculado y duración de revisiones publicadas.
 - Feedback: solo administradores SELECT de respuestas; autores INSERT de feedback propio solicitado (sin lectura de comentarios ajenos).
 - No ejecutar migrations en proyectos Supabase ajenos. Seeds con datos completamente ficticios.
+
+## Extensiones Sprint 3
+- RPCs estrechas de puestos: `configure_meeting_position`, `adjust_meeting_position`, `staff_meeting_position`, `get_meeting_staffing`; sin CRUD directo de puestos para authenticated. Lock de reunión + versión esperada; reemplazo también compara ID/estado/fecha de respuesta. Eliminar solo puestos sin historial.
+- `template_position_definition` exporta requisitos agrupados; `create_editor_meeting` copia `definition_json.requiredPositions` sin asignaciones. `coverage_matrix` devuelve roles/estados agregados por reunión, no identidades.
+- `private.staffing_exceptions`: huella de ocupaciones/persona/tiempos, motivo, autor/fecha; RLS sin grants API. RPCs `get_staffing_conflicts` y `justify_staffing_conflict` controlan alcance.
+- `private.block_replacements`: propuestas de responsable anterior/sucesor, activadas al cambiar revisión publicada. RLS sin grants API; `replace_block_person` escribe borrador sin devolver contenido privado, `get_block_staffing` proyecta responsables autorizados.
+- Sustituciones: FK de sucesor diferida y constraint trigger al final de transacción validan relación y ausencia de ciclos; historial anterior permanece intacto.

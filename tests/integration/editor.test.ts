@@ -890,3 +890,481 @@ it("calendario interno proyecta cobertura agregada, excluye opcionales y conserv
   await rpc(admin,"cancel_editor_meeting",[draft.meetingId,draft.version]);
   expect((await rpc(admin,"calendar_overview",args) as Calendar).meetings).toHaveLength(1);
 });
+
+it("puestos: permisos, cantidades, concurrencia y reemplazo sin transferir respuesta", async () => {
+  const s = snapshotSchema.parse(
+    await rpc(admin, "create_editor_meeting", [org, metadata, null]),
+  );
+  await expect(
+    rpc(member, "configure_meeting_position", [
+      s.meetingId,
+      s.version,
+      id(201),
+      id(301),
+      "critical",
+      2,
+    ]),
+  ).rejects.toThrow(/Forbidden/);
+  await expect(
+    rpc(admin, "configure_meeting_position", [
+      s.meetingId,
+      null,
+      id(201),
+      id(301),
+      "critical",
+      2,
+    ]),
+  ).rejects.toThrow(/conflict/);
+  await expect(
+    rpc(admin, "configure_meeting_position", [
+      s.meetingId,
+      s.version,
+      id(201),
+      id(301),
+      "critical",
+      0,
+    ]),
+  ).rejects.toThrow(/quantity/);
+  await rpc(admin, "configure_meeting_position", [
+    s.meetingId,
+    s.version,
+    id(201),
+    id(301),
+    "critical",
+    2,
+  ]);
+  const view = (await rpc(admin, "get_meeting_staffing", [s.meetingId])) as {
+    version: number;
+    teams: { positions: { id: string }[] }[];
+  };
+  const positions = view.teams.flatMap((t) => t.positions);
+  expect(positions).toHaveLength(2);
+  const position = positions[0].id;
+  const first = (await rpc(admin, "staff_meeting_position", [
+    position,
+    view.version,
+    id(101),
+    null,
+    null,
+    null,
+  ])) as string;
+  await expect(
+    rpc(admin, "staff_meeting_position", [
+      position,
+      view.version,
+      id(102),
+      null,
+      null,
+      null,
+    ]),
+  ).rejects.toThrow(/conflict/);
+  await db.exec(
+    `update public.assignments set status='unavailable',responded_at='2026-10-16T10:00:00Z' where id='${first}'`,
+  );
+  // Use another fictitious team member, never real data.
+  await db.exec(
+    `insert into public.team_memberships(org_id,team_id,person_id) values('${org}','${id(201)}','${id(102)}') on conflict do nothing`,
+  );
+  const second = (await rpc(admin, "staff_meeting_position", [
+    position,
+    view.version + 1,
+    id(102),
+    first,
+    "unavailable",
+    "2026-10-16T10:00:00Z",
+  ])) as string;
+  const rows = await db.query<{
+    id: string;
+    status: string;
+    replaced_by_id: string | null;
+    responded_at: string | null;
+  }>(
+    "select id,status,replaced_by_id,responded_at from public.assignments where position_id=$1",
+    [position],
+  );
+  expect(rows.rows.find((r) => r.id === first)).toMatchObject({
+    status: "unavailable",
+    replaced_by_id: second,
+  });
+  expect(rows.rows.find((r) => r.id === second)).toMatchObject({
+    status: "pending",
+    responded_at: null,
+    replaced_by_id: null,
+  });
+  await expect(
+    rpc(pending, "get_meeting_staffing", [s.meetingId]),
+  ).rejects.toThrow(/Forbidden/);
+  await expect(
+    actor(null, "select public.get_meeting_staffing($1) result", [s.meetingId]),
+  ).rejects.toThrow(/permission/);
+  await expect(
+    actor(
+      admin,
+      `insert into public.meeting_required_positions(org_id,meeting_id,team_id,role_id,priority,quantity_index) values($1,$2,$3,$4,'required',99) returning id result`,
+      [org, s.meetingId, id(201), id(301)],
+    ),
+  ).rejects.toThrow(/permission/);
+  await expect(
+    db.exec(
+      `begin;update public.assignments set replaced_by_id='${first}' where id='${second}';commit`,
+    ),
+  ).rejects.toThrow(/cycle/);
+  await db.exec("rollback");
+});
+
+it("plantillas copian requisitos solo a nuevas reuniones y matriz no expone personas", async () => {
+  const s = snapshotSchema.parse(
+    await rpc(admin, "create_editor_meeting", [org, metadata, null]),
+  );
+  await rpc(admin, "configure_meeting_position", [
+    s.meetingId,
+    s.version,
+    id(201),
+    id(301),
+    "required",
+    2,
+  ]);
+  const positions = await rpc(admin, "template_position_definition", [
+    s.meetingId,
+    s.version + 1,
+  ]);
+  const template = id(9901);
+  await db.query(
+    "insert into public.meeting_templates(id,org_id,name,definition_json) values($1,$2,$3,$4)",
+    [
+      template,
+      org,
+      "Puestos ficticios",
+      { blocks: [], requiredPositions: positions },
+    ],
+  );
+  const first = snapshotSchema.parse(
+    await rpc(admin, "create_editor_meeting", [org, metadata, template]),
+  );
+  await db.query(
+    `update public.meeting_templates set definition_json='{"blocks":[],"requiredPositions":[]}' where id=$1`,
+    [template],
+  );
+  const second = snapshotSchema.parse(
+    await rpc(admin, "create_editor_meeting", [org, metadata, template]),
+  );
+  const count = await db.query<{ meeting_id: string; n: number }>(
+    "select meeting_id,count(*)::int n from public.meeting_required_positions where meeting_id in ($1,$2) group by meeting_id",
+    [first.meetingId, second.meetingId],
+  );
+  expect(count.rows).toEqual([{ meeting_id: first.meetingId, n: 2 }]);
+  const matrix = (await rpc(admin, "coverage_matrix", [
+    org,
+    "2026-10-01",
+    "2026-11-01",
+  ])) as Record<string, unknown>[];
+  expect(matrix.filter((r) => r.meetingId === first.meetingId)).toHaveLength(2);
+  expect(JSON.stringify(matrix)).not.toMatch(
+    /personId|personName|notes|respondedAt/,
+  );
+  await expect(
+    rpc(pending, "coverage_matrix", [org, "2026-10-01", "2026-11-01"]),
+  ).rejects.toThrow(/Forbidden/);
+  await expect(
+    rpc(admin, "coverage_matrix", [org, "2026-01-01", "2026-11-01"]),
+  ).rejects.toThrow(/range/);
+});
+
+it("solapamientos principales/paralelos: límites, excepción y caducidad al reprogramar", async () => {
+  let s = snapshotSchema.parse(
+    await rpc(admin, "create_editor_meeting", [
+      org,
+      { ...metadata, date: "2029-01-18" },
+      null,
+    ]),
+  );
+  const b = emptyBlock("Actividad ficticia");
+  b.durationSeconds = 600;
+  b.responsibles = [
+    { personId: id(101), teamId: id(201), roleId: id(301), assignmentId: null },
+  ];
+  b.subactivities = [
+    {
+      clientKey: crypto.randomUUID(),
+      title: "Paralela ficticia",
+      teamId: id(201),
+      personId: id(101),
+      offsetSeconds: 300,
+      durationSeconds: 300,
+      notes: "No filtrar",
+      fieldSchema: [],
+      customFields: {},
+    },
+  ];
+  s = await save(s, [b]);
+  type Conflict = {
+    fingerprint: string;
+    justification: string | null;
+    personName: string;
+  };
+  let conflicts = (await rpc(admin, "get_staffing_conflicts", [
+    s.meetingId,
+  ])) as Conflict[];
+  expect(conflicts).toHaveLength(1);
+  expect(JSON.stringify(conflicts)).not.toContain("No filtrar");
+  const fingerprint = conflicts[0].fingerprint;
+  await expect(
+    rpc(pending, "get_staffing_conflicts", [s.meetingId]),
+  ).rejects.toThrow(/Forbidden/);
+  await expect(
+    rpc(admin, "justify_staffing_conflict", [
+      s.meetingId,
+      fingerprint,
+      "corto",
+    ]),
+  ).rejects.toThrow(/justification/);
+  await rpc(admin, "justify_staffing_conflict", [
+    s.meetingId,
+    fingerprint,
+    "Excepción ficticia autorizada",
+  ]);
+  conflicts = (await rpc(admin, "get_staffing_conflicts", [
+    s.meetingId,
+  ])) as Conflict[];
+  expect(conflicts[0].justification).toBe("Excepción ficticia autorizada");
+  s = await save(s, s.blocks, { ...s.metadata, startLocalTime: "11:00" });
+  conflicts = (await rpc(admin, "get_staffing_conflicts", [
+    s.meetingId,
+  ])) as Conflict[];
+  expect(conflicts[0].fingerprint).not.toBe(fingerprint);
+  expect(conflicts[0].justification).toBeNull();
+  await expect(
+    rpc(admin, "justify_staffing_conflict", [
+      s.meetingId,
+      fingerprint,
+      "Excepción ficticia autorizada",
+    ]),
+  ).rejects.toThrow(/changed/);
+  // Sequential main blocks sharing a person touch at the boundary, not overlap.
+  const sequential = emptyBlock("Secuencial ficticia");
+  sequential.durationSeconds = 600;
+  sequential.responsibles = b.responsibles;
+  s = await save(s, [{ ...s.blocks[0], subactivities: [] }, sequential]);
+  expect(await rpc(admin, "get_staffing_conflicts", [s.meetingId])).toEqual([]);
+});
+
+it("reemplazo de actividad mantiene al publicado hasta publicar y conserva su respuesta", async () => {
+  let s = snapshotSchema.parse(
+    await rpc(admin, "create_editor_meeting", [
+      org,
+      { ...metadata, date: "2029-02-18" },
+      null,
+    ]),
+  );
+  const b = emptyBlock("Responsable ficticio");
+  b.durationSeconds = 600;
+  b.responsibles = [
+    { personId: id(101), teamId: id(201), roleId: id(301), assignmentId: null },
+  ];
+  s = snapshotSchema.parse(
+    await rpc(admin, "publish_editor_snapshot", [
+      s.meetingId,
+      s.version,
+      s.metadata,
+      [b],
+    ]),
+  );
+  const old = s.blocks[0].responsibles[0].assignmentId!;
+  await rpc(admin, "confirm_assignment", [old, "confirmed"]);
+  await rpc(admin, "replace_block_person", [
+    s.meetingId,
+    s.version,
+    old,
+    id(102),
+  ]);
+  let state = await db.query<{ status: string; replaced_by_id: string | null }>(
+    "select status,replaced_by_id from public.assignments where id=$1",
+    [old],
+  );
+  expect(state.rows[0]).toEqual({ status: "confirmed", replaced_by_id: null });
+  s = snapshotSchema.parse(
+    await rpc(admin, "get_editor_snapshot", [s.meetingId]),
+  );
+  const replacement = s.blocks[0].responsibles[0].assignmentId!;
+  expect(replacement).not.toBe(old);
+  expect(
+    await db.query(
+      "select id from public.assignments where id=$1 and status='pending'",
+      [replacement],
+    ),
+  ).toHaveProperty("rows.length", 1);
+  await expect(
+    rpc(admin, "replace_block_person", [
+      s.meetingId,
+      s.version - 1,
+      replacement,
+      id(101),
+    ]),
+  ).rejects.toThrow(/conflict/);
+  s = snapshotSchema.parse(
+    await rpc(admin, "publish_editor_snapshot", [
+      s.meetingId,
+      s.version,
+      s.metadata,
+      s.blocks,
+    ]),
+  );
+  state = await db.query(
+    "select status,replaced_by_id from public.assignments where id=$1",
+    [old],
+  );
+  expect(state.rows[0]).toEqual({
+    status: "confirmed",
+    replaced_by_id: replacement,
+  });
+  await expect(
+    rpc(admin, "confirm_assignment", [old, "pending"]),
+  ).rejects.toThrow();
+});
+
+it("puestos: ajustes conservan historial y permisos de otro equipo no alcanzan", async () => {
+  const leader = id(9950);
+  await db.exec(
+    `insert into auth.users(id,email) values('${leader}','leader-staff@example.invalid');update public.profiles set approved_at=now() where user_id='${leader}';insert into public.memberships(org_id,user_id,status) values('${org}','${leader}','approved');insert into public.permission_grants(org_id,subject_user_id,team_id,permission) values('${org}','${leader}','${id(202)}','assign'),('${org}','${leader}','${id(202)}','read_people');`,
+  );
+  const s = snapshotSchema.parse(
+    await rpc(admin, "create_editor_meeting", [
+      org,
+      { ...metadata, date: "2029-04-18" },
+      null,
+    ]),
+  );
+  await rpc(admin, "configure_meeting_position", [
+    s.meetingId,
+    s.version,
+    id(201),
+    id(301),
+    "critical",
+    2,
+  ]);
+  const view = (await rpc(admin, "get_meeting_staffing", [s.meetingId])) as {
+    version: number;
+    teams: { positions: { id: string }[] }[];
+  };
+  const [a, b] = view.teams.flatMap((t) => t.positions);
+  await expect(
+    rpc(leader, "staff_meeting_position", [
+      a.id,
+      view.version,
+      id(101),
+      null,
+      null,
+      null,
+    ]),
+  ).rejects.toThrow(/Forbidden/);
+  await rpc(admin, "adjust_meeting_position", [
+    b.id,
+    view.version,
+    "optional",
+    false,
+  ]);
+  await rpc(admin, "adjust_meeting_position", [
+    b.id,
+    view.version + 1,
+    "optional",
+    true,
+  ]);
+  await rpc(admin, "staff_meeting_position", [
+    a.id,
+    view.version + 2,
+    id(101),
+    null,
+    null,
+    null,
+  ]);
+  await expect(
+    rpc(admin, "adjust_meeting_position", [
+      a.id,
+      view.version + 3,
+      "optional",
+      true,
+    ]),
+  ).rejects.toThrow(/history/);
+  const rows = await db.query(
+    "select id from public.meeting_required_positions where meeting_id=$1",
+    [s.meetingId],
+  );
+  expect(rows.rows).toHaveLength(1);
+});
+
+it("conflictos de otro equipo avisan sin revelar contenido ni autorizar excepción", async () => {
+  const leader = id(9951);
+  await db.exec(
+    `insert into auth.users(id,email) values('${leader}','leader-conflict@example.invalid');update public.profiles set approved_at=now() where user_id='${leader}';insert into public.memberships(org_id,user_id,status) values('${org}','${leader}','approved');insert into public.permission_grants(org_id,subject_user_id,team_id,permission) values('${org}','${leader}','${id(201)}','assign'),('${org}','${leader}','${id(201)}','read_people');`,
+  );
+  let s = snapshotSchema.parse(
+    await rpc(admin, "create_editor_meeting", [
+      org,
+      { ...metadata, date: "2029-05-18" },
+      null,
+    ]),
+  );
+  const b = emptyBlock("Bloque ficticio");
+  b.durationSeconds = 600;
+  b.responsibles = [
+    { assignmentId: null, personId: id(101), teamId: id(201), roleId: id(301) },
+  ];
+  b.subactivities = [
+    {
+      clientKey: crypto.randomUUID(),
+      title: "Título privado otro equipo",
+      teamId: id(202),
+      personId: id(101),
+      offsetSeconds: 0,
+      durationSeconds: 600,
+      notes: "Nota secreta",
+      fieldSchema: [],
+      customFields: {},
+    },
+  ];
+  s = await save(s, [b]);
+  const result = (await rpc(leader, "get_staffing_conflicts", [
+    s.meetingId,
+  ])) as { fingerprint: string; canExcept: boolean; description: string }[];
+  expect(result).toHaveLength(1);
+  expect(result[0].canExcept).toBe(false);
+  expect(result[0].description).toContain("no visible");
+  expect(JSON.stringify(result)).not.toMatch(/Título privado|Nota secreta/);
+  await expect(
+    rpc(leader, "justify_staffing_conflict", [
+      s.meetingId,
+      result[0].fingerprint,
+      "Justificación fuera de alcance",
+    ]),
+  ).rejects.toThrow(/Forbidden/);
+});
+
+it('varias propuestas antes de publicar enlazan al reemplazo final sin heredar confirmación',async()=>{
+ let s=snapshotSchema.parse(await rpc(admin,'create_editor_meeting',[org,{...metadata,date:'2029-06-18'},null]));
+ const b=emptyBlock('Responsable ficticio');b.durationSeconds=600;b.responsibles=[{personId:id(101),teamId:id(201),roleId:id(301),assignmentId:null}];
+ s=snapshotSchema.parse(await rpc(admin,'publish_editor_snapshot',[s.meetingId,s.version,s.metadata,[b]]));const first=s.blocks[0].responsibles[0].assignmentId!;
+ await rpc(admin,'confirm_assignment',[first,'confirmed']);
+ await rpc(admin,'replace_block_person',[s.meetingId,s.version,first,id(102)]);
+ s=snapshotSchema.parse(await rpc(admin,'get_editor_snapshot',[s.meetingId]));const middle=s.blocks[0].responsibles[0].assignmentId!;
+ await rpc(admin,'replace_block_person',[s.meetingId,s.version,middle,id(101)]);
+ s=snapshotSchema.parse(await rpc(admin,'get_editor_snapshot',[s.meetingId]));const final=s.blocks[0].responsibles[0].assignmentId!;
+ expect(final).not.toBe(first);
+ s=snapshotSchema.parse(await rpc(admin,'publish_editor_snapshot',[s.meetingId,s.version,s.metadata,s.blocks]));
+ const old=await db.query<{replaced_by_id:string;status:string}>('select replaced_by_id,status from public.assignments where id in($1,$2) order by status',[first,middle]);
+ expect(old.rows.every(a=>a.replaced_by_id===final)).toBe(true);expect(old.rows.map(a=>a.status).sort()).toEqual(['confirmed','pending']);
+ const current=await db.query<{status:string}>('select status from public.assignments where id=$1',[final]);expect(current.rows[0].status).toBe('pending');
+});
+
+it('solapamientos entre reuniones publicadas excluyen rechazos y otros borradores para responsables',async()=>{
+ const meta={...metadata,date:'2029-07-18'};
+ const b=emptyBlock('Actividad ficticia');b.durationSeconds=600;b.responsibles=[{personId:id(101),teamId:id(201),roleId:id(301),assignmentId:null}];
+ let a=snapshotSchema.parse(await rpc(admin,'create_editor_meeting',[org,meta,null]));a=snapshotSchema.parse(await rpc(admin,'publish_editor_snapshot',[a.meetingId,a.version,meta,[b]]));
+ let c=snapshotSchema.parse(await rpc(admin,'create_editor_meeting',[org,{...meta,startLocalTime:'10:05'},null]));c=snapshotSchema.parse(await rpc(admin,'publish_editor_snapshot',[c.meetingId,c.version,c.metadata,[b]]));
+ expect(await rpc(admin,'get_staffing_conflicts',[a.meetingId])).toHaveLength(1);
+ await rpc(admin,'confirm_assignment',[c.blocks[0].responsibles[0].assignmentId!,'unavailable']);
+ expect(await rpc(admin,'get_staffing_conflicts',[a.meetingId])).toEqual([]);
+ const leader=id(9951);
+ let draft=snapshotSchema.parse(await rpc(admin,'create_editor_meeting',[org,meta,null]));draft=await save(draft,[b]);
+ expect(await rpc(admin,'get_staffing_conflicts',[a.meetingId])).toHaveLength(1);
+ expect(await rpc(leader,'get_staffing_conflicts',[a.meetingId])).toEqual([]);
+});
