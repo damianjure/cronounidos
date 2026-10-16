@@ -1,6 +1,6 @@
 # Preparación de servicios y entorno
 
-> Estado vigente 16/10/2026: Sprint 2 cerrado funcionalmente (`SPRINT-2-CLOSURE.md`). Dieciocho migraciones están aplicadas al proyecto independiente `ivmhgizuofxdvvvzdxnl`; la Preview protegida usa `SUPABASE_SECRET_KEY` solo en servidor para retirar archivos encolados. La configuración Production, QA Auth/RLS remota integral y Sprint 3 está en curso (`SPRINT-3.md`); Sprints 4–5 siguen pendientes. Las entradas fechadas más abajo son historial de configuración.
+> Estado vigente 16/10/2026: Sprint 2 cerrado funcionalmente (`SPRINT-2-CLOSURE.md`). Dieciocho migraciones están aplicadas al proyecto independiente `ivmhgizuofxdvvvzdxnl`; la Preview protegida usa `SUPABASE_SECRET_KEY` solo en servidor para retirar archivos encolados. Sprint 3 está en curso (`SPRINT-3.md`). La configuración Production, QA Auth/RLS remota integral y Sprints 4–5 siguen pendientes. Las entradas fechadas más abajo son historial de configuración.
 
 ## Estado actual
 
