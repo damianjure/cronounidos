@@ -6,6 +6,34 @@ import { z } from "zod";
 import { requireAccess } from "@/lib/auth";
 import { safeUrl } from "@/lib/editor/model";
 
+export async function editTeamResponsible(form: FormData) {
+  const parsed = z.object({
+    meetingId: z.uuid(), teamId: z.uuid(), blockId: z.uuid(),
+    version: z.coerce.number().int().positive(),
+    action: z.enum(["add", "remove"]),
+    personId: z.uuid().nullable(), roleId: z.uuid().nullable(), assignmentId: z.uuid().nullable(),
+  }).safeParse({
+    meetingId: form.get("meetingId"), teamId: form.get("teamId"), blockId: form.get("blockId"),
+    version: form.get("version"), action: form.get("action"),
+    personId: form.get("personId") || null, roleId: form.get("roleId") || null,
+    assignmentId: form.get("assignmentId") || null,
+  });
+  if (!parsed.success) redirect("/cronograma?error=datos");
+  const value = parsed.data;
+  const path = `/cronograma/${value.meetingId}/equipos/${value.teamId}`;
+  const a = await requireAccess();
+  if (a.state !== "approved") redirect("/pendiente");
+  const { error } = await a.client.rpc("edit_team_block_responsible", {
+    p_meeting: value.meetingId, p_team: value.teamId, p_block: value.blockId,
+    p_expected_version: value.version, p_action: value.action,
+    p_person: value.personId, p_role: value.roleId, p_assignment: value.assignmentId,
+  });
+  if (error) redirect(`${path}?error=${/conflict/i.test(error.message) ? "conflicto" : "guardar"}`);
+  revalidatePath(path);
+  revalidatePath("/cronograma");
+  redirect(`${path}?ok=responsables`);
+}
+
 export async function saveTeamNotes(form: FormData) {
   const meeting = z.uuid().safeParse(form.get("meetingId"));
   const team = z.uuid().safeParse(form.get("teamId"));

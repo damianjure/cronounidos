@@ -526,6 +526,15 @@ it("editor parcial de equipo modifica solo su nota y preserva el borrador oculto
   expect(full.blocks[1].songIds).toEqual([id(601)]);
   expect(full.blocks[0].notes).toBe("Nueva nota de Media");
   const beforeFields = saved.version;
+  for (const [name, tail] of [
+    ["save_team_block_notes", ["Sin versión"]],
+    ["save_team_block_fields", [{}]],
+    ["add_team_block_url", ["Sin versión", "https://example.invalid/no"]],
+    ["remove_team_block_resource", [id(901)]],
+  ] as const) {
+    await expect(rpc(member, name, [meeting.meetingId, id(201), saved.blocks[0].id, null, ...tail]))
+      .rejects.toThrow(/Version conflict/);
+  }
   await expect(rpc(member, "save_team_block_fields", [meeting.meetingId, id(201), meeting.blocks[1].id, beforeFields, { dato_oculto: "Intrusión" }]))
     .rejects.toThrow(/Forbidden/);
   await expect(rpc(member, "save_team_block_fields", [meeting.meetingId, id(201), saved.blocks[0].id, beforeFields, { dato_oculto: "Intrusión" }]))
@@ -557,6 +566,43 @@ it("editor parcial de equipo modifica solo su nota y preserva el borrador oculto
   expect(afterLinks.publishedRevisionId).toBe(publishedRevision);
   expect(afterLinks.blocks[1].resourceIds).toEqual([hiddenResource]);
   expect(afterLinks.blocks[0].resourceIds).toHaveLength(1);
+});
+it("asignación acotada preserva confirmaciones y responsables de otro equipo", async () => {
+  const own = emptyBlock("Bloque Media");
+  own.teamId = id(201);
+  own.responsibles = [
+    { assignmentId: null, personId: id(101), teamId: id(201), roleId: id(301) },
+    { assignmentId: null, personId: id(102), teamId: id(202), roleId: null },
+  ];
+  let meeting = snapshotSchema.parse(await rpc(admin, "create_editor_meeting", [org, metadata, null]));
+  meeting = snapshotSchema.parse(await rpc(admin, "publish_editor_snapshot", [meeting.meetingId, meeting.version, meeting.metadata, [own]]));
+  const confirmed = meeting.blocks[0].responsibles[0].assignmentId!;
+  const hidden = meeting.blocks[0].responsibles[1].assignmentId!;
+  await rpc(admin, "confirm_assignment", [confirmed, "confirmed"]);
+  await expect(rpc(member, "get_team_block_responsibles", [meeting.meetingId, id(201)])).rejects.toThrow(/Forbidden/);
+  await db.query("insert into public.permission_grants(org_id,subject_user_id,team_id,permission) values($1,$2,$3,'assign'),($1,$2,$3,'read_people') on conflict do nothing", [org, member, id(201)]);
+  type TeamAssignments = { version: number; people: { name: string }[]; blocks: { id: string; responsibles: { assignmentId: string; personName: string; status: string }[] }[] };
+  const visible = await rpc(member, "get_team_block_responsibles", [meeting.meetingId, id(201)]) as TeamAssignments;
+  expect(visible.people.map((p) => p.name)).toEqual(["Alex Ejemplo"]);
+  expect(visible.blocks[0].responsibles.map((a) => a.assignmentId)).toEqual([confirmed]);
+  expect(JSON.stringify(visible)).not.toContain("Sam Ficticio");
+  await expect(rpc(otherAdmin, "get_team_block_responsibles", [meeting.meetingId, id(201)])).rejects.toThrow(/Forbidden/);
+  await expect(actor(null, "select public.get_team_block_responsibles($1,$2)", [meeting.meetingId, id(201)])).rejects.toThrow(/permission denied/);
+  const args = [meeting.meetingId, id(201), visible.blocks[0].id, visible.version];
+  await expect(rpc(member, "edit_team_block_responsible", [...args, "add", id(102), null, null])).rejects.toThrow(/Invalid team person/);
+  await expect(rpc(member, "edit_team_block_responsible", [...args, "add", id(101), id(301), null])).rejects.toThrow(/Duplicate responsible/);
+  await expect(rpc(member, "edit_team_block_responsible", [...args, "remove", null, null, hidden])).rejects.toThrow(/Invalid assignment/);
+  await expect(rpc(member, "edit_team_block_responsible", [meeting.meetingId, id(201), visible.blocks[0].id, null, "add", id(101), id(302), null])).rejects.toThrow(/Version conflict/);
+  const added = await rpc(member, "edit_team_block_responsible", [...args, "add", id(101), id(302), null]) as TeamAssignments;
+  expect(added.blocks[0].responsibles.map((a) => a.status).sort()).toEqual(["confirmed", "pending"]);
+  const removed = await rpc(member, "edit_team_block_responsible", [meeting.meetingId, id(201), added.blocks[0].id, added.version, "remove", null, null, confirmed]) as TeamAssignments;
+  expect(removed.blocks[0].responsibles).toHaveLength(1);
+  const full = snapshotSchema.parse(await rpc(admin, "get_editor_snapshot", [meeting.meetingId]));
+  expect(full.publishedRevisionId).toBe(meeting.publishedRevisionId);
+  expect(full.blocks[0].responsibles.map((a) => a.assignmentId)).toContain(hidden);
+  expect((await db.query<{ status: string }>("select status from public.assignments where id=$1", [confirmed])).rows[0].status).toBe("confirmed");
+  expect((await db.query("select id from public.block_assignment_links where block_id=$1 and assignment_id=$2", [meeting.blocks[0].id, confirmed])).rows).toHaveLength(1);
+  await expect(rpc(member, "edit_team_block_responsible", [...args, "add", id(101), null, null])).rejects.toThrow(/Version conflict/);
 });
 it("puestos duplicados reinician confirmado y conservan historial del origen", async () => {
   const pos = id(960);

@@ -182,6 +182,18 @@ test("edición parcial: notas, campos y enlaces no exponen otros bloques", async
   await addTeam.getByRole("button", { name: "Agregar" }).click();
   await expect(page.getByRole("heading", { name: teamName })).toBeVisible();
 
+  const personName = `Responsable ${suffix}`;
+  const addPerson = page.locator("details").filter({ has: page.locator("summary", { hasText: "Agregar persona" }) });
+  await addPerson.locator("summary").click();
+  await addPerson.locator('input[name="firstName"]').fill(personName);
+  await addPerson.locator('input[name="lastName"]').fill("Ficticio");
+  await addPerson.getByRole("button", { name: "Agregar" }).click();
+  await expect(page.getByRole("status")).toContainText("Directorio actualizado");
+  const team = page.locator("li").filter({ has: page.getByRole("heading", { name: teamName }) });
+  await team.locator('select[name="personId"]').selectOption({ label: `${personName} Ficticio` });
+  await team.getByRole("button", { name: "Agregar al equipo" }).click();
+  await expect(page.getByRole("status")).toContainText("Directorio actualizado");
+
   await page.goto("/cronograma/nueva");
   await page.locator('input[name="title"]').fill(`Reunión notas ${suffix}`);
   await page.locator('input[name="date"]').fill("2026-11-18");
@@ -225,4 +237,14 @@ test("edición parcial: notas, campos y enlaces no exponen otros bloques", async
   await page.getByRole("button", { name: "Confirmar desvinculación" }).click();
   await expect(page.getByRole("status")).toContainText("Recurso desvinculado del borrador");
   await expect(page.getByRole("link", { name: "Plan del equipo" })).toHaveCount(0);
+  await page.getByRole("combobox", { name: "Persona del equipo" }).selectOption({ label: `${personName} Ficticio` });
+  await page.getByRole("button", { name: "Agregar responsable del equipo" }).click();
+  await expect(page.getByRole("status")).toContainText("Responsables actualizados en borrador");
+  const assignments = page.getByRole("region", { name: "Responsables del equipo" });
+  await expect(assignments).toContainText(`${personName} Ficticio`);
+  await expect(assignments).toContainText("Pendiente");
+  await assignments.getByText(`Quitar ${personName} Ficticio del borrador`).click();
+  await assignments.getByRole("button", { name: "Confirmar quitar responsable" }).click();
+  await expect(page.getByRole("status")).toContainText("Responsables actualizados en borrador");
+  await expect(assignments).toContainText("No hay responsables de este equipo");
 });

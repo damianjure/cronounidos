@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { requireAccess } from "@/lib/auth";
 import { fieldDefinition, safeUrl } from "@/lib/editor/model";
 import { TeamCustomFields } from "@/components/editor/team-custom-fields";
+import { TeamResponsibles, teamResponsiblesSchema } from "@/components/editor/team-responsibles";
 import { addTeamLink, removeTeamLink, saveTeamNotes } from "./actions";
 
 const responseSchema = z.object({
@@ -37,6 +38,16 @@ export default async function TeamNotes({
   const parsed = responseSchema.safeParse(data);
   if (error || !parsed.success) notFound();
   const snapshot = parsed.data;
+  const permissions = await Promise.all(["assign", "read_people"].map((permission) =>
+    a.client.rpc("has_permission", { p_org: a.orgId, p_permission: permission, p_team: teamId })));
+  if (permissions.some((result) => result.error)) throw new Error("No se pudieron verificar los permisos de asignación.");
+  let responsibles = null;
+  if (permissions.every((result) => result.data)) {
+    const result = await a.client.rpc("get_team_block_responsibles", { p_meeting: id, p_team: teamId });
+    if (result.error) throw new Error("No se pudieron cargar las asignaciones del equipo.");
+    responsibles = teamResponsiblesSchema.parse(result.data);
+    if (responsibles.version !== snapshot.version) throw new Error("La reunión cambió mientras se cargaba. Volvé a abrirla.");
+  }
   return (
     <>
       <div className="page-heading">
@@ -47,7 +58,7 @@ export default async function TeamNotes({
         <Button asChild variant="outline"><Link href="/cronograma">Volver al cronograma</Link></Button>
       </div>
       {query.error && <p className="notice error" role="alert">{query.error === "conflicto" ? "La reunión cambió. Revisá el contenido actual antes de guardar otra vez." : "No se pudo guardar. Revisá los valores, tus permisos y el estado de la reunión."}</p>}
-      {query.ok && <p className="notice" role="status">{query.ok === "campos" ? "Campos guardados en borrador." : query.ok === "enlace" ? "Enlace agregado al borrador." : query.ok === "desvinculado" ? "Recurso desvinculado del borrador." : "Nota guardada en borrador."}</p>}
+      {query.ok && <p className="notice" role="status">{query.ok === "responsables" ? "Responsables actualizados en borrador." : query.ok === "campos" ? "Campos guardados en borrador." : query.ok === "enlace" ? "Enlace agregado al borrador." : query.ok === "desvinculado" ? "Recurso desvinculado del borrador." : "Nota guardada en borrador."}</p>}
       <p className="notice">Guardar crea un borrador nuevo; si la reunión está publicada, su versión visible sigue intacta hasta que alguien con permiso global publique los cambios. No se envían datos de otros equipos a esta página.</p>
       <section className="panel">
         <h2>Bloques de tu equipo</h2>
@@ -67,6 +78,7 @@ export default async function TeamNotes({
                 <Button variant="outline">Guardar nota</Button>
               </form>
               <TeamCustomFields key={`${block.id}-${snapshot.version}`} meetingId={id} teamId={teamId} blockId={block.id} version={snapshot.version} schema={block.fieldSchema} initialValues={block.customFields} />
+              {responsibles && <TeamResponsibles meetingId={id} teamId={teamId} blockId={block.id} data={responsibles} />}
               <div className="editor-fields">
                 <h4>Recursos y enlaces</h4>
                 {!block.resources.length && <p className="muted">No hay recursos vinculados a este bloque.</p>}
