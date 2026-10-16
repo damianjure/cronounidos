@@ -324,4 +324,12 @@ test("confirmaciones: lote por persona, rechazo individual e historial sin sobre
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await stale.close();
+  await page.goto("/calendario?month=2026-11");
+  await expect(page.getByRole("heading", { name: "noviembre de 2026" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Calendario mensual" }).getByRole("link", { name: new RegExp(`${metadata.title}.*Sin puestos requeridos`) })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Mes siguiente" })).toHaveAttribute("href", "/calendario?month=2026-12");
+  await expect(page.getByRole("region", { name: "Próximas tres reuniones" }).locator(".member-list > li")).toHaveCount(3);
+  expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: `/tmp/crono-calendar-${info.project.name}.png`, fullPage: true });
 });

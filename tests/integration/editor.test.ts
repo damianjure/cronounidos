@@ -859,3 +859,34 @@ it("validación de lotes rechaza duplicados, valores ausentes y reuniones cancel
   await rpc(admin,"cancel_editor_meeting",[meeting.meetingId,meeting.version]);
   await expect(rpc(member,"respond_assignments",[meeting.meetingId,id(101),"confirmed",[expected]])).rejects.toThrow(/Meeting closed/);
 });
+
+it("calendario interno proyecta cobertura agregada, excluye opcionales y conserva publicación", async()=>{
+  const meta={...metadata,title:"Calendario publicado",date:"2029-02-04"};
+  let meeting=snapshotSchema.parse(await rpc(admin,"create_editor_meeting",[org,meta,null]));
+  const block=emptyBlock("Actividad calendario");block.notes="Nota secreta calendario";
+  meeting=snapshotSchema.parse(await rpc(admin,"publish_editor_snapshot",[meeting.meetingId,meeting.version,meta,[block]]));
+  for(let n=0;n<11;n++) {
+    const position=crypto.randomUUID();
+    await db.query("insert into public.meeting_required_positions(id,org_id,meeting_id,team_id,role_id,priority,quantity_index) values($1,$2,$3,$4,$5,$6,$7)",[position,org,meeting.meetingId,id(201),id(301),n===0?"critical":n===10?"optional":"required",n+1]);
+    await db.query("insert into public.assignments(org_id,meeting_id,position_id,person_id,status,responded_at) values($1,$2,$3,$4,$5,now())",[org,meeting.meetingId,position,id(101),n===0?"unavailable":"confirmed"]);
+  }
+  type Calendar={meetings:{id:string;title:string;date:string;total:number;confirmed:number;unavailable:number;criticalMissing:boolean}[];upcoming:unknown[]};
+  const args=[org,"2029-02-01","2029-03-01"];
+  const visible=await rpc(member,"calendar_overview",args) as Calendar;
+  expect(visible.meetings).toHaveLength(1);
+  expect(visible.meetings[0]).toMatchObject({total:10,confirmed:9,unavailable:1,criticalMissing:true});
+  expect(JSON.stringify(visible)).not.toMatch(/Nota secreta|personId|person_id|assignmentId/);
+  expect(visible.upcoming.length).toBeLessThanOrEqual(3);
+  const draft=snapshotSchema.parse(await rpc(admin,"create_editor_meeting",[org,{...meta,title:"Borrador oculto",date:"2029-02-05"},null]));
+  expect((await rpc(admin,"calendar_overview",args) as Calendar).meetings).toHaveLength(2);
+  expect((await rpc(member,"calendar_overview",args) as Calendar).meetings).toHaveLength(1);
+  meeting=await save(meeting,meeting.blocks,{...meta,title:"Título nuevo oculto",date:"2029-03-06"});
+  expect((await rpc(member,"calendar_overview",args) as Calendar).meetings[0]).toMatchObject({title:meta.title,date:meta.date});
+  expect((await rpc(admin,"calendar_overview",args) as Calendar).meetings.find(row=>row.id===meeting.meetingId)).toMatchObject({title:meta.title,date:meta.date});
+  await expect(rpc(otherAdmin,"calendar_overview",args)).rejects.toThrow(/Forbidden/);
+  await expect(rpc(pending,"calendar_overview",args)).rejects.toThrow(/Forbidden/);
+  await expect(actor(null,"select public.calendar_overview($1,$2,$3) result",args)).rejects.toThrow(/permission denied/);
+  await expect(rpc(admin,"calendar_overview",[org,null,"2029-03-01"])).rejects.toThrow(/Invalid calendar range/);
+  await rpc(admin,"cancel_editor_meeting",[draft.meetingId,draft.version]);
+  expect((await rpc(admin,"calendar_overview",args) as Calendar).meetings).toHaveLength(1);
+});

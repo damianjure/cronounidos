@@ -12,6 +12,7 @@ export default defineConfig({
       include: [
         "src/lib/domain.ts",
         "src/lib/confirmations/model.ts",
+        "src/lib/calendar/model.ts",
         "src/lib/editor/model.ts",
         "src/lib/editor/transaction.ts",
         "src/lib/env.ts",

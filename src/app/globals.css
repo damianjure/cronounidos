@@ -875,3 +875,28 @@ h1 {
   outline: 2px dashed var(--accent);
   outline-offset: 2px;
 }
+
+.calendar-scroll { overflow-x: auto; }
+.calendar-grid { display: grid; min-width: 328px; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 5px; margin-top: 18px; }
+.calendar-weekday { text-align: center; font-weight: 600; }
+.calendar-day { min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 6px; min-height: 80px; }
+.calendar-day h3 { margin: 0 0 6px; font-size: .9rem; }
+.calendar-meeting { display: flex; gap: 7px; align-items: center; min-width: 0; min-height: 44px; margin-bottom: 4px; }
+.calendar-meeting > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.calendar-meeting small { display: block; color: var(--muted); }
+.calendar-indicator { flex: 0 0 20px; height: 20px; width: 20px; border: 1px solid var(--line); border-radius: 50%; }
+@media(max-width: 700px) {
+  .calendar-panel { padding: 8px; }
+  .calendar-grid { gap: 1px; }
+  .calendar-day { padding: 0; }
+  .calendar-day h3 { padding: 3px; }
+  .calendar-day .calendar-meeting { justify-content: center; margin-bottom: 0; }
+  .calendar-day .calendar-meeting > span:last-child { display: none; }
+}
+
+.calendar-day .calendar-meeting strong { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+@media(max-width:700px) {
+  .calendar-panel .section-title { display: block; }
+  .calendar-panel nav { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:4px; width:100%; margin-top:12px; }
+  .calendar-panel nav .button { white-space:normal; padding:8px 4px; text-align:center; }
+}

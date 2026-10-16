@@ -20,7 +20,7 @@ export default async function Dashboard() {
       <section className="panel">
         <h2>Primeros pasos</h2>
         <p className="muted">
-          Ya podés preparar reuniones en el editor, consultar el directorio y responder asignaciones según tus permisos. El calendario y la cobertura siguen en desarrollo.
+          Ya podés preparar reuniones en el editor, consultar el directorio y responder asignaciones según tus permisos. Ya está disponible el calendario mensual con cobertura agregada; la matriz y los conflictos siguen en desarrollo.
         </p>
         <p className="footer-note">
           {access.state === "approved" ? access.user.email : ""}
