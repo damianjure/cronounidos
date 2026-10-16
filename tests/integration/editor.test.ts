@@ -1368,3 +1368,16 @@ it('solapamientos entre reuniones publicadas excluyen rechazos y otros borradore
  expect(await rpc(admin,'get_staffing_conflicts',[a.meetingId])).toHaveLength(1);
  expect(await rpc(leader,'get_staffing_conflicts',[a.meetingId])).toEqual([]);
 });
+
+it('un snapshot histórico no revive asignaciones reemplazadas ni sus confirmaciones',async()=>{
+ let s=snapshotSchema.parse(await rpc(admin,'create_editor_meeting',[org,{...metadata,date:'2029-08-18'},null]));
+ const b=emptyBlock('Responsable ficticio');b.durationSeconds=600;b.responsibles=[{personId:id(101),teamId:id(201),roleId:id(301),assignmentId:null}];
+ s=snapshotSchema.parse(await rpc(admin,'publish_editor_snapshot',[s.meetingId,s.version,s.metadata,[b]]));
+ const historic=s;const first=s.blocks[0].responsibles[0].assignmentId!;
+ await rpc(admin,'confirm_assignment',[first,'confirmed']);
+ await rpc(admin,'replace_block_person',[s.meetingId,s.version,first,id(102)]);
+ s=snapshotSchema.parse(await rpc(admin,'get_editor_snapshot',[s.meetingId]));
+ s=snapshotSchema.parse(await rpc(admin,'publish_editor_snapshot',[s.meetingId,s.version,s.metadata,s.blocks]));
+ await expect(save(s,historic.blocks)).rejects.toThrow(/replaced canonical/);
+ const latest=snapshotSchema.parse(await rpc(admin,'get_editor_snapshot',[s.meetingId]));expect(latest.version).toBe(s.version);expect(latest.blocks[0].responsibles[0].personId).toBe(id(102));
+});
