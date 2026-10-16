@@ -2,7 +2,7 @@
 
 ## Estado vigente — 16/10/2026
 
-**En curso; no cerrado.** Entregas disponibles: confirmaciones individuales/masivas por persona con historial y concurrencia, y calendario mensual inicial con cobertura agregada y próximas tres reuniones. Sprints 4 y 5 aún no se iniciaron. No se habilitó Production.
+**Cerrado funcionalmente.** Ver [cierre y evidencia vigente](SPRINT-3-CLOSURE.md): puestos por plantilla/reunión, reemplazos, conflictos con excepción y matriz/calendario completos. Las secciones siguientes conservan el historial de las entregas iniciales y sus pruebas. Sprints 4 y 5 no iniciados; Production y QA remota integral pendientes.
 
 ## Implementado
 
@@ -32,15 +32,9 @@
 
 La migración 17 se aplicó localmente y al proyecto independiente `ivmhgizuofxdvvvzdxnl`; el dry-run posterior quedó al día y el advisor remoto de seguridad no reportó errores. No se cargaron seeds ni fixtures en remoto. No hay variables nuevas para esta entrega: las confirmaciones usan el cliente de sesión, no la clave privilegiada. El commit de confirmaciones `f7b98f7` pasó ambos jobs de CI ([38847972871](https://github.com/damianjure/cronounidos/actions/runs/38847972871)) y su Preview quedó Ready. No equivale a probar escritura remota con todos los roles.
 
-## Pendiente de Sprint 3
+## Pendientes iniciales resueltos al cierre
 
-1. Gestión de puestos critical/required/optional por plantilla y reunión, incluida cantidad/vacantes.
-2. Reemplazo explícito con trazabilidad, sin transferir una confirmación ni modificar silenciosamente el plan publicado.
-3. Solapamientos de asignaciones principales/paralelas y excepción con motivo autorizado.
-4. Completar calendario (alta desde día vacío y selector de varias reuniones) y matriz desktop/tarjetas móviles; el mes, los indicadores y próximas tres reuniones ya están implementados.
-5. E2E de integrante y responsable con sesiones distintas en navegador; SQL ya cubre sus permisos. QA remota integral y dispositivos físicos siguen pendientes.
-
-El rechazo ya se conserva; **no hay reemplazo automático**. Las confirmaciones no completan por sí solas el Sprint 3. Continuar según `ROADMAP.md` antes de pasar al modo en vivo del Sprint 4.
+Los cinco pendientes de esta entrega (puestos, reemplazo, conflictos, calendario/matriz y sesiones E2E separadas) están implementados y verificados; ver `SPRINT-3-CLOSURE.md`. QA remota integral, invitación aceptada y dispositivos físicos siguen documentados como tareas de entorno/producción, no como pruebas realizadas.
 
 ## Calendario inicial (continuación 16/10/2026)
 
@@ -48,7 +42,7 @@ El rechazo ya se conserva; **no hay reemplazo automático**. Las confirmaciones 
 
 Se utiliza la revisión publicada si existe, incluso para planificadores con un borrador abierto. Solo un planificador ve el borrador inicial; sus metadatos se toman del snapshot, no de columnas base desactualizadas. La proyección de próximas tres reuniones usa el día actual en la zona de la organización. Los puestos son operativos por reunión, como en DATABASE.md; no se confunde número de responsables de bloque con número de puestos requeridos.
 
-Mes con navegación, círculos tipo/cobertura, descripción textual accesible y próximas tres tarjetas con confirmados/pendientes/no disponibles/vacantes. Sin puestos requeridos = gris, opcionales excluidos; 90% con crítico sin confirmar sigue amarillo. En móvil se muestran indicadores con enlaces etiquetados y tarjetas legibles debajo; el grid tiene scroll contenido solo en pantallas demasiado estrechas. En desktop se muestran títulos. Los screenshots de Chrome se revisaron y se ajustó el encabezado móvil para evitar controles comprimidos. Aún no es la matriz ni la gestión de requisitos.
+Mes con navegación, círculos tipo/cobertura, descripción textual accesible y próximas tres tarjetas con confirmados/pendientes/no disponibles/vacantes. Sin puestos requeridos = gris, opcionales excluidos; 90% con crítico sin confirmar sigue amarillo. En móvil se muestran indicadores con enlaces etiquetados y tarjetas legibles debajo; el grid tiene scroll contenido solo en pantallas demasiado estrechas. En desktop se muestran títulos. Los screenshots de Chrome se revisaron y se ajustó el encabezado móvil para evitar controles comprimidos. En esta entrega inicial todavía faltaban matriz y gestión de requisitos; ambas se completaron en el cierre.
 
 La migración `20261016145232_sprint3_calendar_projection.sql` se probó en PGlite y Supabase local. SQL cubre privacidad/anon/pendiente/otra org, metadata publicada estable, exclusión de borradores y opcionales, gate crítico, rango inválido y cancelación. Chrome autenticado desktop/mobile también consulta mes, próximas tres, axe y overflow. Se mantienen pendientes dispositivos físicos y QA remota integral.
 

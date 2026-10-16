@@ -1364,7 +1364,7 @@ it('solapamientos entre reuniones publicadas excluyen rechazos y otros borradore
  await rpc(admin,'confirm_assignment',[c.blocks[0].responsibles[0].assignmentId!,'unavailable']);
  expect(await rpc(admin,'get_staffing_conflicts',[a.meetingId])).toEqual([]);
  const leader=id(9951);
- let draft=snapshotSchema.parse(await rpc(admin,'create_editor_meeting',[org,meta,null]));draft=await save(draft,[b]);
+ const draft=snapshotSchema.parse(await rpc(admin,'create_editor_meeting',[org,meta,null]));await save(draft,[b]);
  expect(await rpc(admin,'get_staffing_conflicts',[a.meetingId])).toHaveLength(1);
  expect(await rpc(leader,'get_staffing_conflicts',[a.meetingId])).toEqual([]);
 });

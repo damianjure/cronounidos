@@ -25,7 +25,7 @@ El review del 15/10 está en `REVIEW-2026-10-15.md`. F1–F7 quedaron corregidos
 
 - La carga de **archivos** desde el editor **acotado por equipo** continúa deshabilitada: Storage INSERT exige `plan` global. Los responsables pueden editar enlaces HTTPS y desvincular recursos propios. No se amplió RLS ni se usó la clave secreta para conceder subidas fuera del alcance autorizado. La carga global de archivos sí está implementada y probada. Si el PRD requiere que un responsable sin `plan` global suba archivos, se necesita una política/flujo estrecho adicional antes de habilitarlo.
 - La suite autenticada corrió contra Supabase local; no se insertaron fixtures ni se ejercitaron todos los roles/organizaciones contra Supabase remoto. Preview protegida tiene smoke HTTP, no un E2E de escritura remota. PWA física/standalone en iOS/Android y lector de pantalla manual siguen pendientes.
-- Sprints 3–5 (confirmaciones completas, cobertura/calendario/matriz, modo vivo y feedback) y Production siguen pendientes. El cierre es **del Sprint 2**, no del MVP.
+- Actualización 16/10: Sprint 3 cerrado (`SPRINT-3-CLOSURE.md`); Sprints 4–5 (modo vivo y feedback) y Production siguen pendientes. El cierre es **del Sprint 2**, no del MVP.
 - Antes de Production: remitente dedicado en vez del remitente personal temporal de Preview, protección de contraseñas filtradas, QA Auth/RLS con JWT remotos y configuración Production.
 - Los cinco advisories `high` de dependencias de desarrollo en la cadena ESLint permanecen documentados; audit runtime está limpio. No se forzó un upgrade mayor incompatible.
 

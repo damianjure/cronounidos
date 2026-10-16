@@ -2,7 +2,7 @@
 
 ## Estado vigente (16/10/2026)
 
-**Sprint 2 cerrado funcionalmente** tras reparar F1–F7 del review y validar Supabase local, Chrome desktop/mobile, CI y Preview protegida. El detalle de aceptación, límites y evidencias está en [`SPRINT-2-CLOSURE.md`](SPRINT-2-CLOSURE.md). **El MVP completo y Production no están listos**: Sprints 3–5 siguen pendientes. Las notas cronológicas siguientes conservan estados históricos y no reemplazan el cierre vigente.
+**Sprint 2 cerrado funcionalmente** tras reparar F1–F7 del review y validar Supabase local, Chrome desktop/mobile, CI y Preview protegida. El detalle de aceptación, límites y evidencias está en [`SPRINT-2-CLOSURE.md`](SPRINT-2-CLOSURE.md). **El MVP completo y Production no están listos**: Sprints 4–5 siguen pendientes (Sprint 3 cerrado; ver `SPRINT-3-CLOSURE.md`). Las notas cronológicas siguientes conservan estados históricos y no reemplazan el cierre vigente.
 
 ## Estado histórico al iniciar este documento
 
@@ -61,7 +61,7 @@ Los reportes de este turno quedaron en `/tmp/chrono-sprint2-e2e-report-chrome3` 
 - La actualización selectiva de plantillas ya crea borradores para hasta 20 reuniones elegidas explícitamente en una transacción; queda pendiente validar UX en dispositivos físicos y decidir si hace falta un modo de fusión más fino por bloque.
 - Edición parcial por equipo: la ruta estrecha de notas y campos personalizados preserva campos/relaciones no legibles. Ya permite agregar URL HTTPS y desvincular recursos en un borrador; también permite agregar/quitar responsables propios con grants adicionales. Sigue pendiente el flujo de archivos privados desde este acceso acotado.
 - E2E autenticadas en CI, además de pruebas reales de PWA/dispositivos. Las 28 E2E CLI originales cubren base y demo; la nueva suite local autenticada cubre los flujos principales del editor/directorio, pero todavía no corre en CI ni en Preview remota.
-- Continuar Sprints 3–5: confirmaciones UI, reemplazos/conflictos, cobertura/calendario/matriz, modo vivo/Realtime y feedback +10 min.
+- Continuación actualizada: Sprint 3 cerrado (`SPRINT-3-CLOSURE.md`); continuar Sprints 4–5, modo vivo/Realtime y feedback +10 min.
 
 ### Continuación del directorio (15/10/2026)
 
