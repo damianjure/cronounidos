@@ -237,33 +237,363 @@ it("RLS y grants protegen tablas, incluso con un JWT vÃ¡lido de otra organizaciÃ
   ).rejects.toThrow(/Invalid/);
 });
 
-it('captura participantes del publicado y responsables sin duplicar roles ni perder reemplazados',async()=>{
- const meta={title:'Participantes ficticios',date:'2029-10-25',startLocalTime:'10:00',timezone:'America/Argentina/Buenos_Aires',meetingTypeId:null,seriesId:null};
- const person='10000000-0000-4000-8000-000000000101',replacement='10000000-0000-4000-8000-000000000102',hidden='10000000-0000-4000-8000-000000000103',team='10000000-0000-4000-8000-000000000201',role='10000000-0000-4000-8000-000000000301';
- await db.exec(`insert into public.people(id,org_id,first_name,last_name) values('${hidden}','${org}','Persona borrador','Ficticia');update public.profiles set org_id='${org}',person_id='${person}' where user_id='${scoped}';insert into public.team_memberships(org_id,team_id,person_id) values('${org}','${team}','${replacement}') on conflict do nothing;insert into public.permission_grants(org_id,subject_user_id,team_id,permission) values('${org}','${scoped}','${team}','assign'),('${org}','${scoped}','${team}','confirm') on conflict do nothing;`);
- let m=snapshotSchema.parse(await rpc(admin,'create_editor_meeting',[org,meta,null]));
- const block={...emptyBlock('Ficticia'),teamId:team,durationSeconds:600,responsibles:[{assignmentId:null,personId:person,teamId:team,roleId:role}]};
- m=snapshotSchema.parse(await rpc(admin,'publish_editor_snapshot',[m.meetingId,m.version,meta,[block,{...block,clientKey:crypto.randomUUID()}]]));
- await rpc(admin,'configure_meeting_position',[m.meetingId,m.version,team,role,'required',1]);
- const positions=await db.query<{id:string}>('select id from public.meeting_required_positions where meeting_id=$1',[m.meetingId]);
- await rpc(admin,'staff_meeting_position',[positions.rows[0].id,m.version+1,person,null,null,null]);
- m=snapshotSchema.parse(await rpc(admin,'get_editor_snapshot',[m.meetingId]));
- await rpc(admin,'save_editor_snapshot',[m.meetingId,m.version,meta,[{...block,responsibles:[{assignmentId:null,personId:hidden,teamId:team,roleId:role}]}]]);
- let live=await transition(await snapshot(operator,m.meetingId),'start');
- const before=await db.query<{person_id:string|null;user_id:string|null}>('select person_id,user_id from private.live_participants where meeting_id=$1',[m.meetingId]);
- expect(before.rows).toHaveLength(2);expect(before.rows.filter(p=>p.person_id===person)).toHaveLength(1);expect(before.rows.some(p=>p.person_id===hidden)).toBe(false);expect(before.rows.filter(p=>p.user_id===scoped)).toHaveLength(1);expect(before.rows.filter(p=>p.user_id===operator)).toHaveLength(1);
- const staffing=await db.query<{version:number;id:string;status:string}>('select m.version,a.id,a.status from public.meetings m join public.assignments a on a.meeting_id=m.id where m.id=$1 and a.position_id=$2 and a.replaced_by_id is null',[m.meetingId,positions.rows[0].id]);
- await rpc(admin,'staff_meeting_position',[positions.rows[0].id,staffing.rows[0].version,replacement,staffing.rows[0].id,staffing.rows[0].status,null]);
- live=await transition(live,'next');live=await transition(live,'close');
- const final=await db.query<{person_id:string|null;user_id:string|null}>('select person_id,user_id from private.live_participants where meeting_id=$1',[m.meetingId]);
- expect(final.rows.filter(p=>p.person_id===person)).toHaveLength(1);expect(final.rows.filter(p=>p.person_id===replacement)).toHaveLength(1);expect(final.rows.filter(p=>p.user_id===operator)).toHaveLength(1);expect(final.rows.some(p=>p.person_id===hidden)).toBe(false);
+it("captura participantes del publicado y responsables sin duplicar roles ni perder reemplazados", async () => {
+  const meta = {
+    title: "Participantes ficticios",
+    date: "2029-10-25",
+    startLocalTime: "10:00",
+    timezone: "America/Argentina/Buenos_Aires",
+    meetingTypeId: null,
+    seriesId: null,
+  };
+  const person = "10000000-0000-4000-8000-000000000101",
+    replacement = "10000000-0000-4000-8000-000000000102",
+    hidden = "10000000-0000-4000-8000-000000000103",
+    team = "10000000-0000-4000-8000-000000000201",
+    role = "10000000-0000-4000-8000-000000000301";
+  await db.exec(
+    `insert into public.people(id,org_id,first_name,last_name) values('${hidden}','${org}','Persona borrador','Ficticia');update public.profiles set org_id='${org}',person_id='${person}' where user_id='${scoped}';insert into public.team_memberships(org_id,team_id,person_id) values('${org}','${team}','${replacement}') on conflict do nothing;insert into public.permission_grants(org_id,subject_user_id,team_id,permission) values('${org}','${scoped}','${team}','assign'),('${org}','${scoped}','${team}','confirm') on conflict do nothing;`,
+  );
+  let m = snapshotSchema.parse(
+    await rpc(admin, "create_editor_meeting", [org, meta, null]),
+  );
+  const block = {
+    ...emptyBlock("Ficticia"),
+    teamId: team,
+    durationSeconds: 600,
+    responsibles: [
+      { assignmentId: null, personId: person, teamId: team, roleId: role },
+    ],
+  };
+  m = snapshotSchema.parse(
+    await rpc(admin, "publish_editor_snapshot", [
+      m.meetingId,
+      m.version,
+      meta,
+      [block, { ...block, clientKey: crypto.randomUUID() }],
+    ]),
+  );
+  await rpc(admin, "configure_meeting_position", [
+    m.meetingId,
+    m.version,
+    team,
+    role,
+    "required",
+    1,
+  ]);
+  const positions = await db.query<{ id: string }>(
+    "select id from public.meeting_required_positions where meeting_id=$1",
+    [m.meetingId],
+  );
+  await rpc(admin, "staff_meeting_position", [
+    positions.rows[0].id,
+    m.version + 1,
+    person,
+    null,
+    null,
+    null,
+  ]);
+  m = snapshotSchema.parse(
+    await rpc(admin, "get_editor_snapshot", [m.meetingId]),
+  );
+  await rpc(admin, "save_editor_snapshot", [
+    m.meetingId,
+    m.version,
+    meta,
+    [
+      {
+        ...block,
+        responsibles: [
+          { assignmentId: null, personId: hidden, teamId: team, roleId: role },
+        ],
+      },
+    ],
+  ]);
+  let live = await transition(await snapshot(operator, m.meetingId), "start");
+  const before = await db.query<{
+    person_id: string | null;
+    user_id: string | null;
+  }>(
+    "select person_id,user_id from private.live_participants where meeting_id=$1",
+    [m.meetingId],
+  );
+  expect(before.rows).toHaveLength(2);
+  expect(before.rows.filter((p) => p.person_id === person)).toHaveLength(1);
+  expect(before.rows.some((p) => p.person_id === hidden)).toBe(false);
+  expect(before.rows.filter((p) => p.user_id === scoped)).toHaveLength(1);
+  expect(before.rows.filter((p) => p.user_id === operator)).toHaveLength(1);
+  const staffing = await db.query<{
+    version: number;
+    id: string;
+    status: string;
+  }>(
+    "select m.version,a.id,a.status from public.meetings m join public.assignments a on a.meeting_id=m.id where m.id=$1 and a.position_id=$2 and a.replaced_by_id is null",
+    [m.meetingId, positions.rows[0].id],
+  );
+  await rpc(admin, "staff_meeting_position", [
+    positions.rows[0].id,
+    staffing.rows[0].version,
+    replacement,
+    staffing.rows[0].id,
+    staffing.rows[0].status,
+    null,
+  ]);
+  live = await transition(live, "next");
+  await transition(live, "close");
+  const final = await db.query<{
+    person_id: string | null;
+    user_id: string | null;
+  }>(
+    "select person_id,user_id from private.live_participants where meeting_id=$1",
+    [m.meetingId],
+  );
+  expect(final.rows.filter((p) => p.person_id === person)).toHaveLength(1);
+  expect(final.rows.filter((p) => p.person_id === replacement)).toHaveLength(1);
+  expect(final.rows.filter((p) => p.user_id === operator)).toHaveLength(1);
+  expect(final.rows.some((p) => p.person_id === hidden)).toBe(false);
 });
 
-it('Realtime puede descubrir la columna filtro sin obtener filas ni otras columnas',async()=>{
- const metadata=await db.query<{visible:boolean}>("select has_column_privilege('supabase_realtime_admin','public.meeting_live_state','meeting_id','SELECT') visible");expect(metadata.rows[0].visible).toBe(true);
- await db.exec('set role supabase_realtime_admin');try{
- expect((await db.query("select column_name from information_schema.columns where table_schema='public' and table_name='meeting_live_state'")).rows).toEqual([{column_name:'meeting_id'}]);
- expect((await db.query('select meeting_id from public.meeting_live_state')).rows).toEqual([]);
- await expect(db.query('select org_id from public.meeting_live_state')).rejects.toThrow(/permission/);
- }finally{await db.exec('reset role');}
+it("Realtime puede descubrir la columna filtro sin obtener filas ni otras columnas", async () => {
+  const metadata = await db.query<{ visible: boolean }>(
+    "select has_column_privilege('supabase_realtime_admin','public.meeting_live_state','meeting_id','SELECT') visible",
+  );
+  expect(metadata.rows[0].visible).toBe(true);
+  await db.exec("set role supabase_realtime_admin");
+  try {
+    expect(
+      (
+        await db.query(
+          "select column_name from information_schema.columns where table_schema='public' and table_name='meeting_live_state'",
+        )
+      ).rows,
+    ).toEqual([{ column_name: "meeting_id" }]);
+    expect(
+      (await db.query("select meeting_id from public.meeting_live_state")).rows,
+    ).toEqual([]);
+    await expect(
+      db.query("select org_id from public.meeting_live_state"),
+    ).rejects.toThrow(/permission/);
+  } finally {
+    await db.exec("reset role");
+  }
+});
+
+it("feedback: cierre efectivo +10 min, avisos idempotentes y comentarios solo admin", async () => {
+  const m = await meeting();
+  const s = await transition(await snapshot(operator, m.meetingId), "start");
+  // The operator is captured automatically, without relying on any browser.
+  await db.exec("select private.dispatch_due_feedback()");
+  expect(await rpc(operator, "my_feedback_requests", [org])).toEqual([]);
+  await transition(s, "close");
+  await db.exec("select private.dispatch_due_feedback()");
+  expect(await rpc(operator, "my_feedback_requests", [org])).toEqual([]);
+  // SQL test time travel only, never exposed as a dispatcher argument/API.
+  await db.query(
+    "update public.meeting_live_state set closed_at=clock_timestamp()-interval '9 minutes 59 seconds' where meeting_id=$1",
+    [m.meetingId],
+  );
+  await db.exec("select private.dispatch_due_feedback()");
+  expect(await rpc(operator, "my_feedback_requests", [org])).toEqual([]);
+  await db.query(
+    "update public.meeting_live_state set closed_at=clock_timestamp()-interval '10 minutes 1 second' where meeting_id=$1",
+    [m.meetingId],
+  );
+  await db.exec(
+    "select private.dispatch_due_feedback();select private.dispatch_due_feedback()",
+  );
+  const requests = (await rpc(operator, "my_feedback_requests", [org])) as {
+    id: string;
+    meetingId: string;
+    submittedAt: string | null;
+  }[];
+  const request = requests.find((r) => r.meetingId === m.meetingId)!;
+  expect(request).toBeDefined();
+  expect(Object.keys(request).sort()).toEqual([
+    "dueAt",
+    "id",
+    "meetingId",
+    "submittedAt",
+    "title",
+  ]);
+  const notices = await db.query<{ n: number }>(
+    "select count(*)::int n from public.personal_notifications where feedback_request_id=$1",
+    [request.id],
+  );
+  expect(notices.rows[0].n).toBe(1);
+  await expect(
+    rpc(reader, "submit_meeting_feedback", [
+      request.id,
+      "problem",
+      "Secreto ficticio",
+    ]),
+  ).rejects.toThrow(/Forbidden/);
+  for (const user of [pending, outsider, scoped, reader, operator])
+    await expect(
+      rpc(user, "admin_meeting_feedback", [org, m.meetingId]),
+    ).rejects.toThrow(/Forbidden/);
+  await expect(rpc(null, "my_feedback_requests", [org])).rejects.toThrow(
+    /permission denied/,
+  );
+  await expect(
+    rpc(operator, "submit_meeting_feedback", [request.id, "other", null]),
+  ).rejects.toThrow(/Invalid/);
+  await expect(
+    rpc(operator, "submit_meeting_feedback", [
+      request.id,
+      "problem",
+      "x".repeat(501),
+    ]),
+  ).rejects.toThrow(/Invalid/);
+  await rpc(operator, "submit_meeting_feedback", [
+    request.id,
+    "problem",
+    "Secreto ficticio",
+  ]);
+  await rpc(operator, "submit_meeting_feedback", [
+    request.id,
+    "problem",
+    "Secreto ficticio",
+  ]);
+  await expect(
+    rpc(operator, "submit_meeting_feedback", [request.id, "all_good", null]),
+  ).rejects.toThrow(/Already submitted/);
+  const own = JSON.stringify(
+    await rpc(operator, "my_feedback_requests", [org]),
+  );
+  expect(own).not.toMatch(/Secreto ficticio|problem|comment|category/);
+  expect(
+    (
+      (await rpc(operator, "my_feedback_requests", [org])) as typeof requests
+    ).find((r) => r.id === request.id)?.submittedAt,
+  ).not.toBeNull();
+  expect(
+    JSON.stringify(
+      await rpc(admin, "admin_meeting_feedback", [org, m.meetingId]),
+    ),
+  ).toContain("Secreto ficticio");
+  for (const user of [operator, reader, pending, outsider]) {
+    await db.exec(
+      `set role authenticated;select set_config('request.jwt.claim.sub','${user}',false)`,
+    );
+    try {
+      await expect(
+        db.exec("select * from private.meeting_feedback"),
+      ).rejects.toThrow(/permission denied/);
+      const n = await db.query<{ user_id: string }>(
+        "select * from public.personal_notifications",
+      );
+      expect(n.rows.every((r) => r.user_id === user)).toBe(true);
+      if (user !== operator) expect(n.rows).toHaveLength(0);
+      await expect(
+        db.exec("select private.dispatch_due_feedback()"),
+      ).rejects.toThrow(/permission denied/);
+    } finally {
+      await db.exec("reset role");
+    }
+  }
+  await db.query(
+    "update public.memberships set status='suspended' where org_id=$1 and user_id=$2",
+    [org, operator],
+  );
+  expect(await rpc(operator, "my_feedback_requests", [org])).toEqual([]);
+  await expect(
+    rpc(operator, "submit_meeting_feedback", [
+      request.id,
+      "problem",
+      "Secreto ficticio",
+    ]),
+  ).rejects.toThrow(/Forbidden/);
+  await db.query(
+    "update public.memberships set status='approved' where org_id=$1 and user_id=$2",
+    [org, operator],
+  );
+});
+
+it("solicitudes sin cuenta se vinculan solo por identidad aprobada y no se transfieren", async () => {
+  const m = await meeting();
+  const s = await transition(await snapshot(operator, m.meetingId), "start");
+  const person = crypto.randomUUID();
+  await db.query(
+    "insert into public.people(id,org_id,first_name,last_name) values($1,$2,'Feedback','Ficticio')",
+    [person, org],
+  );
+  await db.query("select private.capture_live_participant($1,$2)", [
+    m.meetingId,
+    person,
+  ]);
+  await transition(s, "close");
+  await db.query(
+    "update public.meeting_live_state set closed_at=clock_timestamp()-interval '11 minutes' where meeting_id=$1",
+    [m.meetingId],
+  );
+  await db.exec("select private.dispatch_due_feedback()");
+  const original = await db.query<{ id: string; user_id: string | null }>(
+    "select id,user_id from private.feedback_requests where meeting_id=$1 and person_id=$2",
+    [m.meetingId, person],
+  );
+  expect(original.rows).toHaveLength(1);
+  expect(original.rows[0].user_id).toBeNull();
+  // Admin-owned identity link exists, but pending membership cannot receive it.
+  await db.query(
+    "update public.profiles set person_id=$1,org_id=$2 where user_id=$3",
+    [person, org, pending],
+  );
+  await db.exec("select private.dispatch_due_feedback()");
+  expect(await rpc(pending, "my_feedback_requests", [org])).toEqual([]);
+  await db.query(
+    "update public.profiles set approved_at=clock_timestamp() where user_id=$1",
+    [pending],
+  );
+  await db.query(
+    "update public.memberships set status='approved' where user_id=$1 and org_id=$2",
+    [pending, org],
+  );
+  await db.exec(
+    "select private.dispatch_due_feedback();select private.dispatch_due_feedback()",
+  );
+  const own = (await rpc(pending, "my_feedback_requests", [org])) as {
+    id: string;
+  }[];
+  expect(own.map((r) => r.id)).toContain(original.rows[0].id);
+  await db.query(
+    "update public.profiles set person_id=null,org_id=null where user_id=$1",
+    [pending],
+  );
+  await db.query(
+    "update public.profiles set person_id=$1,org_id=$2 where user_id=$3",
+    [person, org, reader],
+  );
+  await db.exec("select private.dispatch_due_feedback()");
+  expect(
+    (
+      (await rpc(reader, "my_feedback_requests", [org])) as { id: string }[]
+    ).map((r) => r.id),
+  ).not.toContain(original.rows[0].id);
+  expect(
+    (
+      (await rpc(pending, "my_feedback_requests", [org])) as { id: string }[]
+    ).map((r) => r.id),
+  ).toContain(original.rows[0].id);
+  await db.exec(
+    "begin;grant select on private.meeting_feedback to authenticated",
+  );
+  try {
+    for (const user of [reader, operator, pending, outsider, scoped]) {
+      await db.exec(
+        `set role authenticated;select set_config('request.jwt.claim.sub','${user}',false)`,
+      );
+      expect(
+        (await db.query("select * from private.meeting_feedback")).rows,
+      ).toEqual([]);
+      await db.exec("reset role");
+    }
+    await db.exec(
+      `set role authenticated;select set_config('request.jwt.claim.sub','${admin}',false)`,
+    );
+    expect(
+      (await db.query("select * from private.meeting_feedback")).rows.length,
+    ).toBeGreaterThan(0);
+  } finally {
+    await db.exec("reset role;rollback");
+  }
 });

@@ -46,3 +46,11 @@ Otros requisitos aprobados:
 ## Primer componente Sprint 5 — destinatarios congelados
 - Capturar en esquema privado participantes del plan publicado al iniciar/cerrar, responsables autorizados de los equipos involucrados y operadores de cada transición. No incluir personas agregadas solamente a borradores. Capturar reemplazos operativos durante la reunión y conservar las personas anteriores.
 - Deduplicar por reunión/persona y reunión/usuario, aun con varios roles; completar una cuenta originalmente ausente sin transferir silenciosamente una identidad ya capturada. Esta captura no crea solicitudes ni avisos antes de +10 min; scheduler, respuestas y notificaciones siguen pendientes en `SPRINT-5.md`.
+
+## Feedback: identidad congelada y despacho privado (Sprint 5)
+
+- Las solicitudes/respuestas viven en `private`, sin grants de tabla a clientes. La lectura personal es un DTO allowlist de estado; la categoría y el comentario solo salen por un RPC con autorización administrativa de organización. RLS de respuestas mantiene esa restricción incluso ante un futuro grant de lectura.
+- Se crea una solicitud por participante capturado, con unicidad adicional reunión/usuario. Una identidad sin cuenta solo puede vincularse posteriormente mediante el vínculo persona/usuario administrado y membresía aprobada; una identidad ya vinculada nunca se transfiere automáticamente.
+- El despacho es una transacción privada con exclusión mutua y restricciones únicas; usa el reloj del servidor y `closed_at + 10 minutos`. No acepta un reloj ni destinatario del navegador. Supabase Cron lo ejecuta cada minuto: nunca antes de los diez minutos, con hasta un minuto de latencia normal de sondeo.
+- El envío de respuesta es inmutable. Un reintento con idéntico contenido es idempotente; otro contenido se rechaza. Máximo 500 caracteres de comentario, categorías cerradas. Los avisos no incluyen texto ni categoría de feedback.
+- La migración del scheduler da NOTICE si `pg_cron` no existe (por ejemplo PGlite); esto NO equivale a scheduler operativo. Cada entorno real requiere verificar job activo e historial de ejecución. No se declara entrega de correo: proveedor/outbox siguen pendientes.

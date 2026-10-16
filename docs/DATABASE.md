@@ -57,3 +57,7 @@ Diseño inicial; Codex debe escribir migraciones SQL versionadas y pruebas RLS. 
 - `private.staffing_exceptions`: huella de ocupaciones/persona/tiempos, motivo, autor/fecha; RLS sin grants API. RPCs `get_staffing_conflicts` y `justify_staffing_conflict` controlan alcance.
 - `private.block_replacements`: propuestas de responsable anterior/sucesor, activadas al cambiar revisión publicada. RLS sin grants API; `replace_block_person` escribe borrador sin devolver contenido privado, `get_block_staffing` proyecta responsables autorizados.
 - Sustituciones: FK de sucesor diferida y constraint trigger al final de transacción validan relación y ausencia de ciclos; historial anterior permanece intacto.
+
+### Implementación física de feedback (Sprint 5, parcial)
+
+`private.live_participants` conserva la identidad capturada; `private.feedback_requests` conserva destinatario, vencimiento y estado; `private.meeting_feedback` guarda categoría/comentario/autor sin acceso de tabla para clientes. La política de SELECT de respuestas es exclusivamente administrativa, además del guard del RPC `admin_meeting_feedback`. `public.personal_notifications` expone únicamente avisos propios a miembros aprobados (RLS), sin texto de feedback. Los RPC personales son `my_feedback_requests` (solo estado) y `submit_meeting_feedback` (una respuesta, reintento idéntico permitido). Ningún cliente puede ejecutar `private.dispatch_due_feedback`.
