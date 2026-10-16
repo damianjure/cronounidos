@@ -1,5 +1,5 @@
 # PRD v2.0 — Crono Unidos
-**Estado:** alcance del MVP aprobado; Sprints 0–3 implementados funcionalmente, Sprints 4–5 y Production pendientes. **Fecha:** octubre 2026.
+**Estado:** alcance del MVP aprobado; Sprints 0–4 implementados funcionalmente; Sprint 5 y Production pendientes. **Fecha:** octubre 2026.
 **Producto:** PWA de planificación, coordinación y operación de reuniones de Unidos para Servir.
 
 ## 1. Objetivo y usuarios

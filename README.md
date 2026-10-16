@@ -2,7 +2,7 @@
 
 PWA en español para planificar y coordinar las reuniones de Unidos para Servir.
 
-**Estado:** Sprints 0–3 cerrados funcionalmente ([cierre del editor](docs/SPRINT-2-CLOSURE.md), [cierre de equipos y cobertura](docs/SPRINT-3-CLOSURE.md)). El MVP completo y Production siguen pendientes: Sprints 4–5 cubren modo vivo, feedback y salida pública. Preview protegida; ver [setup](docs/SETUP.md) y limitaciones del cierre.
+**Estado:** Sprints 0–4 cerrados funcionalmente ([cierre del editor](docs/SPRINT-2-CLOSURE.md), [cierre de equipos y cobertura](docs/SPRINT-3-CLOSURE.md)). El MVP completo y Production siguen pendientes: Sprint 5 completa feedback y salida pública; ver [modo vivo verificado](docs/SPRINT-4.md). Preview protegida; ver [setup](docs/SETUP.md) y limitaciones del cierre.
 
 ## Ejecutar
 

@@ -1,6 +1,6 @@
 # Sprint 4 — Publicación y modo en vivo
 
-## Entrega local en verificación (16/10/2026)
+## Cerrado funcionalmente (16/10/2026)
 
 Implementadas consola `/en-vivo/[id]`, transiciones autorizadas/versionadas/idempotentes, revisión publicada congelada, tiempos reales, cronómetro, adelanto/demora, ETA y recuperación por Realtime/polling. El cierre es explícito; no se da por ejecutado lo pendiente. El borrador puede guardarse, pero publicar o cancelar después de iniciar se rechaza atómicamente. El snapshot de ejecución no incluye notas ni personas; anon no puede leerlo.
 
@@ -11,7 +11,7 @@ Implementadas consola `/en-vivo/[id]`, transiciones autorizadas/versionadas/idem
 - Cobertura de 12 módulos críticos configurados: 98,52% líneas, 92,22% ramas; cálculo live 100% líneas y 96,15% ramas. No cubre por sí sola UI remota ni infraestructura.
 - SQL lint: sin errores nuevos; conserva warnings anteriores del writer y duplicador.
 
-### Pendiente antes del cierre
+### Checkpoint previo al cierre (histórico)
 La base PWA/drag pasó 30/30 y se revisaron screenshots desktop/mobile. La migración 24 ya se aplicó al remoto independiente tras dry-run limitado al archivo nuevo, sin seeds. Se verificaron grants: las dos RPCs nuevas no son ejecutables por anon; advisor sin ERROR (avisos intencionales de DEFINER/tablas privadas y Leaked Password Protection pendiente). Resta verificar CI/Preview. No declarar todavía Sprint 4 cerrado ni Sprint 5 implementado. Dispositivos físicos y QA Auth remota integral siguen pendientes para producción.
 
 ## Operación
@@ -19,7 +19,7 @@ El inicio comienza la primera actividad; `Finalizar y avanzar` registra fin/inic
 
 La operación requiere grant global `operate_live`; consulta mediante agenda, planificación u operación global. Un grant de equipo no opera el cronograma completo. La columna mínima publicada por Realtime tiene RLS y no actores/comentarios; auditoría y ejecuciones están en esquema privado. Los clientes vuelven a consultar con su sesión, reconcilian al enfocar/reconectar y cada 10 s como respaldo. Sin conexión no se encolan transiciones; no se usa service role.
 
-## Hallazgo de CI en revisión
+## Hallazgo inicial de CI (corregido y verificado)
 
 El primer CI `38951934474` pasó foundation pero falló la E2E móvil esperando el cambio en el segundo contexto en 7 s (desktop sí pasó). La traza mostró una consola aún en versión 0 con canal suscrito, sin error de permisos. Se reemplaza esa inferencia temporal por una aserción explícita de recepción del frame `postgres_changes` de la reunión; no se deshabilita Realtime ni se agrega retry automático. Falta repetir CI con esa instrumentación antes de cerrar el sprint.
 
@@ -29,6 +29,15 @@ El frame `system` expuso `invalid column for filter meeting_id`. Se verificó en
 
 La consola establece explícitamente el JWT de sesión, pide confirmación de suscripción y escucha `system`: solo informa Realtime activo ante confirmación real de PostgreSQL Changes. Un rechazo conserva polling y muestra advertencia, no éxito falso. La E2E ahora inspecciona frames de negocio de la reunión y adjunta únicamente metadata de diagnóstico (nunca tokens). La pasada posterior volvió a 16/16 local; se repite nuevamente con todo el esquema aplicado antes de CI.
 
-## Estado al checkpoint
+## Estado al checkpoint previo (histórico)
 
 Corrección y captura privada aplicadas local/remoto: **26 migraciones**, sin seeds ni fixtures remotos. `npm run check` verde con 185 pruebas; suite autenticada completa repetida sobre el esquema actualizado **16/16**, incluidos frames reales de PostgreSQL Changes. Base Chrome/PWA/drag **30/30**. Código correctivo `b11a56b` pusheado; CI nuevo pendiente. El fallo del CI anterior no se marca como resuelto hasta verificar el nuevo run. Sprint 4 sigue en verificación, no cerrado; Sprint 5 solo tiene captura de destinatarios.
+
+
+## Cierre funcional verificado — 16/10/2026
+
+Las ejecuciones GitHub Actions **38954074578** (corrección `b11a56b`) y **38954173338** (`1335176`) terminaron **success**, tanto `foundation` como `authenticated-local`. Se verificó la recepción real de PostgreSQL Changes en Chrome desktop/mobile; el CI fallido anterior queda registrado como antecedente, no como resultado actual.
+
+Preview **Ready**, deployment `dpl_4scF26NMvw2jfHFAvgPocc28q3z2`: https://crono-unidos-bfleb774s-damianjure-5692s-projects.vercel.app . Alias de rama asociado. Una petición sin sesión a `/en-vivo/00000000-0000-4000-8000-000000000001` devolvió **307 a `/ingresar`** usando el bypass de protección autorizado de Vercel CLI, sin exponer credenciales. Esta comprobación no sustituye QA autenticada remota.
+
+Con esto se cierra **funcionalmente Sprint 4**, no el MVP ni Production. Se conservan como gates de Sprint 5: QA integral con roles/Auth remotos, aceptación de invitación pendiente, dispositivos físicos/PWA, dominio/remitente exclusivos y despliegue de producción. El núcleo de feedback iniciado después tiene su propia evidencia y pendientes en `SPRINT-5.md`.
