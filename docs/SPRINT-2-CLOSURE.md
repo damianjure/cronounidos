@@ -14,7 +14,7 @@ El review del 15/10 está en `REVIEW-2026-10-15.md`. F1–F7 quedaron corregidos
 | RLS/RPC negativas | 67 pruebas de integración; incluyen bloque sin equipo, UPDATE/DELETE directo de recurso, versión NULL y duplicación de paralelas. |
 | Cobertura configurada | 98,09% líneas, 90,19% ramas en los 7 módulos críticos configurados; no es cobertura total de la app. |
 | Dependencias runtime | `npm audit --omit=dev`: 0 vulnerabilidades. |
-| Chrome desktop/mobile base | 28/28; teclado móvil 10/10 repeticiones aisladas, sin retries. |
+| Chrome desktop/mobile base | 30/30; teclado móvil 10/10 y drag físico mouse/dedo 10/10 repeticiones aisladas, sin retries. |
 | Chrome autenticado + Supabase local | 10/10; reemplazo/borrado real Storage, rechazo de DELETE directo y comprobación del objeto ausente **antes** del teardown. |
 | PWA/accesibilidad | Tests de manifest, service worker, offline, caché/logout, foco y axe sin violaciones automáticas en las rutas probadas. |
 | Supabase local | Migración aplicada; advisor de seguridad sin errores, SQL lint solo 3 warnings previos. |
