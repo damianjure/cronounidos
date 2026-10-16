@@ -21,5 +21,5 @@ export default async function LivePage({
         <Link href="/cronograma">Volver al cronograma</Link>
       </>
     );
-  return <LiveConsole initial={result.snapshot} />;
+  return <LiveConsole key={result.snapshot.meetingId} initial={result.snapshot} />;
 }

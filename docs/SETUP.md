@@ -144,3 +144,7 @@ Cambiar `NUEVO` por un identificador nuevo en cada ejecución. Playwright admite
 ## Cierre Sprint 3 — configuración pendiente
 
 Las migraciones 19–23 no necesitan API keys ni variables nuevas. Ver `SPRINT-3-CLOSURE.md` para evidencia y límites. Antes de Production: revisar Leaked Password Protection (actualmente desactivada y sujeta al plan disponible), remitente/SMTP exclusivos, variables de Production y redirects/dominio; repetir QA Auth/RLS remota con roles distintos y dispositivos físicos. No se cambió plan de Supabase ni facturación.
+
+## Preferencia de Production confirmada — 16/10/2026
+
+El usuario eligió usar un subdominio de `damianjure.com` y crear un remitente exclusivo para Crono Unidos. Candidatos a verificar por disponibilidad: `crono.damianjure.com` y `crono@damianjure.com`. No se modificó DNS ni se habilitó Production; primero completar verificación del MVP, configurar identidad remitente en Brevo y validar dominio/redirects. El remitente temporal sigue autorizado solo en Preview.

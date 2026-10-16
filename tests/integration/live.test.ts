@@ -259,3 +259,11 @@ it('captura participantes del publicado y responsables sin duplicar roles ni per
  expect(final.rows.filter(p=>p.person_id===person)).toHaveLength(1);expect(final.rows.filter(p=>p.person_id===replacement)).toHaveLength(1);expect(final.rows.filter(p=>p.user_id===operator)).toHaveLength(1);expect(final.rows.some(p=>p.person_id===hidden)).toBe(false);
 });
 
+it('Realtime puede descubrir la columna filtro sin obtener filas ni otras columnas',async()=>{
+ const metadata=await db.query<{visible:boolean}>("select has_column_privilege('supabase_realtime_admin','public.meeting_live_state','meeting_id','SELECT') visible");expect(metadata.rows[0].visible).toBe(true);
+ await db.exec('set role supabase_realtime_admin');try{
+ expect((await db.query("select column_name from information_schema.columns where table_schema='public' and table_name='meeting_live_state'")).rows).toEqual([{column_name:'meeting_id'}]);
+ expect((await db.query('select meeting_id from public.meeting_live_state')).rows).toEqual([]);
+ await expect(db.query('select org_id from public.meeting_live_state')).rejects.toThrow(/permission/);
+ }finally{await db.exec('reset role');}
+});

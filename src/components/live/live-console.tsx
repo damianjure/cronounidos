@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { browserClient } from "@/lib/supabase/browser";
 import { durationLabel, liveTiming, type LiveSnapshot } from "@/lib/live/model";
@@ -98,25 +99,49 @@ export function LiveConsole({ initial }: { initial: LiveSnapshot }) {
     window.addEventListener("focus", focus);
     document.addEventListener("visibilitychange", focus);
     const client = browserClient();
-    const channel = client
-      .channel(`meeting-live:${initial.meetingId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "meeting_live_state",
-          filter: `meeting_id=eq.${initial.meetingId}`,
-        },
-        () => {
-          void refresh();
-        },
-      )
-      .subscribe((status) => {
-        if (!mounted.current) return;
-        setRealtime(status === "SUBSCRIBED");
-        if (status === "SUBSCRIBED") void refresh();
-      });
+    let channel: RealtimeChannel | null = null;
+    async function connect() {
+      const { data, error } = await client.auth.getSession();
+      if (!mounted.current) return;
+      if (error || !data.session) {
+        setRealtime(false);
+        return;
+      }
+      await client.realtime.setAuth(data.session.access_token);
+      if (!mounted.current) return;
+      channel = client
+        .channel(`meeting-live:${initial.meetingId}`, {
+          config: { postgres_changes_options: { wait: true } },
+        })
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "meeting_live_state",
+            filter: `meeting_id=eq.${initial.meetingId}`,
+          },
+          () => {
+            void refresh();
+          },
+        )
+        .on("system", {}, (payload) => {
+          if (!mounted.current || payload.extension !== "postgres_changes")
+            return;
+          setRealtime(payload.status === "ok");
+          if (payload.status === "ok") void refresh();
+          else
+            setMessage(
+              "Realtime no disponible. La consulta periódica sigue activa; podés sincronizar manualmente.",
+            );
+        })
+        .subscribe((status) => {
+          if (mounted.current && status !== "SUBSCRIBED") setRealtime(false);
+        });
+    }
+    void connect().catch(() => {
+      if (mounted.current) setRealtime(false);
+    });
     return () => {
       mounted.current = false;
       clearTimeout(initialize);
@@ -126,7 +151,7 @@ export function LiveConsole({ initial }: { initial: LiveSnapshot }) {
       window.removeEventListener("offline", reconnect);
       window.removeEventListener("focus", focus);
       document.removeEventListener("visibilitychange", focus);
-      void client.removeChannel(channel);
+      if (channel) void client.removeChannel(channel);
     };
   }, [initial.meetingId, initial.serverNow, refresh]);
   async function operate(command: Command) {

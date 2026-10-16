@@ -623,6 +623,7 @@ test("Sprint 3: puestos, reemplazos, conflictos, matriz y sesiones de integrante
 });
 
 test('en vivo: dos dispositivos sincronizan, recuperan desconexión y cierran explícitamente',async({page,browser},info)=>{
+ test.setTimeout(60000);
  const client=createClient(process.env.E2E_SUPABASE_URL!,process.env.E2E_PUBLISHABLE_KEY!,{auth:{persistSession:false,autoRefreshToken:false}});
  const auth=await client.auth.signInWithPassword({email,password:process.env.E2E_TEST_PASSWORD!});expect(auth.error).toBeNull();
  const membership=await client.from('memberships').select('org_id').eq('user_id',auth.data.user!.id).single();expect(membership.error).toBeNull();
@@ -632,12 +633,24 @@ test('en vivo: dos dispositivos sincronizan, recuperan desconexión y cierran ex
  await login(page);await page.goto(`/en-vivo/${meeting.meetingId}`);
  await expect(page.getByRole('status')).toContainText('Realtime activa');
  const other=await browser.newContext({baseURL:new URL(page.url()).origin,storageState:await page.context().storageState(),viewport:page.viewportSize()!});
+ const realtimePackets:unknown[]=[];
  try {
-  const second=await other.newPage();await second.goto(`/en-vivo/${meeting.meetingId}`);await expect(second.getByRole('status')).toContainText('Realtime activa');
+  const second=await other.newPage();let realtimeChanges=0;
+  second.on('websocket',socket=>socket.on('framereceived',frame=>{
+   try {
+    const packet=JSON.parse(String(frame.payload));
+    const event=Array.isArray(packet)?packet[3]:packet.event;
+    const payload=Array.isArray(packet)?packet[4]:packet.payload;
+    if(realtimePackets.length<50)realtimePackets.push({event,payloadKeys:Object.keys(payload??{}),dataKeys:Object.keys(payload?.data??{}),recordKeys:Object.keys(payload?.data?.record??{}),recordMeeting:payload?.data?.record?.meeting_id,system:event==='system'?{status:payload.status,message:payload.message,extension:payload.extension}:undefined});
+    if(event==='postgres_changes'&&payload?.data?.record?.meeting_id===meeting.meetingId)realtimeChanges++;
+   }catch{/* Heartbeats and non-JSON frames are not business changes. */}
+  }));
+  await second.goto(`/en-vivo/${meeting.meetingId}`);await expect(second.getByRole('status')).toContainText('Realtime activa');
   await page.getByRole('button',{name:'Iniciar reunión y primera actividad',exact:true}).click();
   await expect(page.getByRole('region',{name:'Actividad en curso'}).getByRole('heading',{name:'Primera en vivo',exact:true})).toBeVisible();
-  // No manual refresh on the second device: change must arrive via Realtime.
-  await expect(second.getByRole('region',{name:'Actividad en curso'}).getByRole('heading',{name:'Primera en vivo',exact:true})).toBeVisible({timeout:7000});
+  // Prove an actual business WebSocket frame, not a polling-speed proxy.
+  await expect.poll(()=>realtimeChanges,{timeout:20000}).toBeGreaterThan(0);
+  await expect(second.getByRole('region',{name:'Actividad en curso'}).getByRole('heading',{name:'Primera en vivo',exact:true})).toBeVisible({timeout:10000});
   const stale=await client.rpc('transition_live',{p_meeting:meeting.meetingId,p_version:0,p_request:crypto.randomUUID(),p_command:'next'});expect(stale.error?.message).toContain('version conflict');
   await page.context().setOffline(true);await expect(page.getByRole('status')).toContainText('Sin conexión');await expect(page.getByRole('button',{name:'Finalizar y avanzar',exact:true})).toBeDisabled();
   await second.getByRole('button',{name:'Finalizar y avanzar',exact:true}).click();await expect(second.getByRole('region',{name:'Actividad en curso'}).getByRole('heading',{name:'Segunda en vivo',exact:true})).toBeVisible();
@@ -646,5 +659,5 @@ test('en vivo: dos dispositivos sincronizan, recuperan desconexión y cierran ex
   await page.locator('summary',{hasText:'Cerrar reunión'}).click();await page.getByRole('checkbox',{name:'Confirmo el cierre definitivo de la reunión.'}).check();await page.getByRole('button',{name:'Cerrar reunión definitivamente',exact:true}).click();await expect(page.getByRole('heading',{name:'Reunión cerrada',exact:true})).toBeVisible();await expect(second.getByRole('heading',{name:'Reunión cerrada',exact:true})).toBeVisible();await expect(page.getByText('No ejecutada',{exact:true})).toHaveCount(1);
   await page.reload();await expect(page.getByRole('heading',{name:'Reunión cerrada',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Iniciar reunión y primera actividad',exact:true})).toHaveCount(0);
   await page.screenshot({path:`/tmp/crono-live-${info.project.name}.png`,fullPage:true});
- }finally {await page.context().setOffline(false);await other.close();}
+ }finally {await info.attach('realtime-packet-metadata',{body:JSON.stringify(realtimePackets),contentType:'application/json'});await page.context().setOffline(false);await other.close();}
 });
