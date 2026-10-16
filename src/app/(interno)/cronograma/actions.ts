@@ -48,7 +48,7 @@ export async function duplicateMeeting(
   return snapshotSchema.parse(data);
 }
 export async function createMeeting(
-  previous: { message: string },
+  _previous: { message: string },
   form: FormData,
 ): Promise<{ message: string }> {
   const parsed = metadataSchema.safeParse({

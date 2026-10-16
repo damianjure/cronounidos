@@ -1,5 +1,7 @@
 # Entrega Sprints 0 y 1 — 14 de octubre de 2026
 
+> Registro histórico de la validación local inicial. El estado operativo actual, incluido el push y la Preview posteriores, está en `SETUP.md` y `SPRINT-2-CLOSURE.md`.
+
 ## Alcance y estado
 
 Se leyó `AGENTS.md` y toda la documentación aprobada antes de implementar. El repositorio original contenía solo documentación. Los cambios están en ramas locales `codex/`; sin push ni despliegue remoto.

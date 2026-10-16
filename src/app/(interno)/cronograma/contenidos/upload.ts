@@ -26,17 +26,22 @@ async function validatedFile(form: FormData) {
 
 async function removeVerified(path: string) {
   // The JWT-backed RPC authorizes queue membership; the secret client only removes bytes.
-  const bucket = adminClient().storage.from(bucketName);
-  const { error: removeError } = await bucket.remove([path]);
-  if (removeError) return false;
-  const slash = path.lastIndexOf("/");
-  const folder = path.slice(0, slash);
-  const name = path.slice(slash + 1);
-  const { data, error: listError } = await bucket.list(folder, {
-    limit: 100,
-    search: name,
-  });
-  return !listError && !data?.some((file) => file.name === name);
+  try {
+    const bucket = adminClient().storage.from(bucketName);
+    const { error: removeError } = await bucket.remove([path]);
+    if (removeError) return false;
+    const slash = path.lastIndexOf("/");
+    const folder = path.slice(0, slash);
+    const name = path.slice(slash + 1);
+    const { data, error: listError } = await bucket.list(folder, {
+      limit: 100,
+      search: name,
+    });
+    return !listError && !data?.some((file) => file.name === name);
+  } catch {
+    // Missing server-only secret or a transient Storage failure: keep the job queued.
+    return false;
+  }
 }
 
 async function drainCleanup(a: Context) {

@@ -53,7 +53,7 @@ export default async function TeamNotes({
       <div className="page-heading">
         <div>
           <h1>Contenido de tu equipo</h1>
-          <p className="muted">{snapshot.title}. Solo se muestran y editan las notas, campos y enlaces de los bloques de este equipo.</p>
+          <p className="muted">{snapshot.title}. Solo se muestran y editan las notas, campos, enlaces y responsables autorizados de los bloques de este equipo.</p>
         </div>
         <Button asChild variant="outline"><Link href="/cronograma">Volver al cronograma</Link></Button>
       </div>

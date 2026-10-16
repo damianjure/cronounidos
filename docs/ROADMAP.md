@@ -2,13 +2,13 @@
 
 Cada sprint termina con código ejecutable, commits, migraciones reproducibles y pruebas.
 
-## Sprint 0 — Proyecto base
+## Sprint 0 — Proyecto base (cerrado)
 Next.js App Router TS strict; Tailwind/shadcn, dnd-kit; estructura limpia; tema light/dark/system; navegación Mobile + Desktop, selector de previsualización solo desktop; PWA manifest, íconos y caché prudente; .env.example y README.
 
-## Sprint 1 — Datos y autorización
+## Sprint 1 — Datos y autorización (cerrado)
 Migrations Supabase: org/personas/usuarios/equipos/roles/permisos; reuniones y versiones; bloques, contenidos y asignaciones. Auth email con aprobación y altas/invitaciones. RLS por administrador, planificador, responsable, integrante e invitado; seeds ficticios y tests de aislamiento.
 
-## Sprint 2 — Editor
+## Sprint 2 — Editor (cerrado funcionalmente; ver `SPRINT-2-CLOSURE.md`)
 Crear/editar/publicar/duplicar reuniones con selección de datos y confirmaciones reseteadas; editor timeline drag táctil/mouse/teclado y recálculo; bloques configurables por instancia/plantilla con notas/URLs; A&A con músicos y canciones, mensajes, anuncios, recursos, subactividades paralelas.
 
 ## Sprint 3 — Equipos y cobertura

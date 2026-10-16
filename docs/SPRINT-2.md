@@ -1,8 +1,12 @@
 # Sprint 2 — editor (14/10/2026)
 
-## Estado
+## Estado vigente (16/10/2026)
 
-Continuación solicitada por el usuario, incluyendo reintento de Chrome. **Sprint 2 avanzado, todavía no cerrado.** No se declara completo el MVP ni producción lista. Se mantienen PRD/DECISIONS/AGENTS, sin WhatsApp, OAuth Google ni ProPresenter.
+**Sprint 2 cerrado funcionalmente** tras reparar F1–F7 del review y validar Supabase local, Chrome desktop/mobile, CI y Preview protegida. El detalle de aceptación, límites y evidencias está en [`SPRINT-2-CLOSURE.md`](SPRINT-2-CLOSURE.md). **El MVP completo y Production no están listos**: Sprints 3–5 siguen pendientes. Las notas cronológicas siguientes conservan estados históricos y no reemplazan el cierre vigente.
+
+## Estado histórico al iniciar este documento
+
+Continuación solicitada por el usuario, incluyendo reintento de Chrome. Sprint 2 estaba avanzado pero no cerrado. Se mantienen PRD/DECISIONS/AGENTS, sin WhatsApp, OAuth Google ni ProPresenter.
 
 ## Implementado
 

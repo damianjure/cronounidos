@@ -2,7 +2,7 @@
 
 PWA en español para planificar y coordinar las reuniones de Unidos para Servir.
 
-**Estado:** Sprints 0/1 implementados y primer tramo del editor de Sprint 2 disponible ([informe](docs/SPRINT-2.md)). No es todavía el MVP completo: faltan funciones avanzadas del editor, calendario/cobertura, operación en vivo y feedback de Sprints 2–5. Ver [informe de entrega](docs/SPRINTS-0-1.md) para las pruebas y limitaciones.
+**Estado:** Sprints 0–2 cerrados funcionalmente ([cierre del editor](docs/SPRINT-2-CLOSURE.md)). El MVP completo y Production siguen pendientes: Sprints 3–5 cubren confirmaciones, cobertura/calendario/matriz, modo vivo y feedback. La Preview continúa protegida; ver [setup](docs/SETUP.md) y limitaciones del cierre.
 
 ## Ejecutar
 
@@ -27,9 +27,11 @@ npm run test:coverage
 npm run build
 npx playwright install --with-deps chromium
 npm run test:e2e
+# Con Supabase local/Colima activo: también ejecuta flujos autenticados y Storage
+npm run test:e2e:auth:local
 ```
 
-Las E2E usan el build de producción sin backend configurado. La suite SQL/RLS usa PostgreSQL embebido (PGlite), con `auth.uid()` simulado, y no requiere Docker. Además se probaron Auth y PostgREST contra Supabase local con Colima y cuentas ficticias. Chrome del ejecutor CLI todavía aborta en este host; el navegador integrado permitió verificar los flujos base. Ver [el informe](docs/SPRINTS-0-1.md) para el alcance exacto y lo pendiente.
+Las E2E usan el build de producción sin backend configurado. La suite SQL/RLS usa PostgreSQL embebido (PGlite), con `auth.uid()` simulado, y no requiere Docker. Además se probaron Auth y PostgREST contra Supabase local con Colima y cuentas ficticias. Chrome instalado ya ejecuta las E2E locales y en CI; las limitaciones actuales están en [el cierre de Sprint 2](docs/SPRINT-2-CLOSURE.md).
 
 ## Organización
 
@@ -39,7 +41,7 @@ Las E2E usan el build de producción sin backend configurado. La suite SQL/RLS u
 - `supabase/migrations/`: esquema, RLS, constraints, RPCs y snapshots reproducibles.
 - `supabase/seed.sql`: solo identidades ficticias de dominio, **sin usuarios Auth**.
 - `tests/`: dominio, Auth mockeado, SQL/RLS ejecutado y PWA; Playwright desktop/mobile.
-- `.github/workflows/ci.yml`: verificaciones y E2E para ejecutar en un runner habilitado.
+- `.github/workflows/ci.yml`: lint, typecheck, tests/cobertura, build y E2E base/autenticadas en CI.
 
 ## Reglas del producto
 
