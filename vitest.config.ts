@@ -11,6 +11,7 @@ export default defineConfig({
       provider: "v8",
       include: [
         "src/lib/domain.ts",
+        "src/lib/live/model.ts",
         "src/lib/confirmations/model.ts",
         "src/lib/calendar/model.ts",
         "src/lib/staffing/model.ts",
