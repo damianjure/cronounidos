@@ -413,6 +413,7 @@ it("aplicar plantilla a reuniones seleccionadas crea borradores atómicos y cons
   ];
   await expect(rpc(member, "apply_template_selected", [templateId, 2, targets])).rejects.toThrow(/Forbidden/);
   await expect(rpc(admin, "apply_template_selected", [templateId, 1, targets])).rejects.toThrow(/Template version conflict/);
+  await expect(rpc(admin, "apply_template_selected", [templateId, null, targets])).rejects.toThrow(/Template version conflict/);
   await expect(rpc(admin, "apply_template_selected", [templateId, 2, [targets[0], targets[0]]])).rejects.toThrow(/repeated targets/);
   await rpc(admin, "apply_template_selected", [templateId, 2, targets]);
   published = snapshotSchema.parse(await rpc(admin, "get_editor_snapshot", [published.meetingId]));
@@ -732,4 +733,61 @@ it("cancelar requiere plan y versión vigente; oculta agenda sin borrar historia
   expect((await actor(null, "select * from public.public_agenda($1)", [meeting.meetingId])).rows).toEqual([]);
   expect((await db.query("select count(*)::int as count from public.meeting_revisions where meeting_id=$1", [meeting.meetingId])).rows).toEqual([{ count: 2 }]);
   await expect(rpc(admin, "cancel_editor_meeting", [meeting.meetingId, published.version + 1])).rejects.toThrow(/Meeting closed/);
+});
+
+it("rechaza versiones nulas en editor, publicación, cancelación y plantilla", async () => {
+  const meeting = snapshotSchema.parse(await rpc(admin, "create_editor_meeting", [org, metadata, null]));
+  await expect(rpc(admin, "save_editor_snapshot", [meeting.meetingId, null, metadata, []])).rejects.toThrow(/Version conflict/);
+  await expect(rpc(admin, "publish_revision", [meeting.meetingId, meeting.revisionId, null])).rejects.toThrow(/Version conflict/);
+  await expect(rpc(admin, "cancel_editor_meeting", [meeting.meetingId, null])).rejects.toThrow(/Version conflict/);
+});
+
+it("ninguna RPC de equipo permite editar un bloque sin equipo", async () => {
+  const block = emptyBlock("Bloque general protegido");
+  block.resourceIds = [id(901)];
+  const meeting = snapshotSchema.parse(await rpc(admin, "create_editor_meeting", [org, metadata, null]));
+  const saved = snapshotSchema.parse(await rpc(admin, "save_editor_snapshot", [meeting.meetingId, meeting.version, metadata, [block]]));
+  await db.query("insert into public.permission_grants(org_id,subject_user_id,team_id,permission) values($1,$2,$3,'plan'),($1,$2,$3,'read_content'),($1,$2,$3,'assign'),($1,$2,$3,'read_people') on conflict do nothing", [org, member, id(201)]);
+  const args = [saved.meetingId, id(201), saved.blocks[0].id, saved.version];
+  await expect(rpc(member, "save_team_block_notes", [...args, "No permitido"])).rejects.toThrow(/Forbidden/);
+  await expect(rpc(member, "save_team_block_fields", [...args, {}])).rejects.toThrow(/Forbidden/);
+  await expect(rpc(member, "add_team_block_url", [...args, "Link", "https://example.invalid"])).rejects.toThrow(/Forbidden/);
+  await expect(rpc(member, "remove_team_block_resource", [...args, id(901)])).rejects.toThrow(/Forbidden/);
+  await expect(rpc(member, "edit_team_block_responsible", [...args, "add", id(101), null, null])).rejects.toThrow(/Forbidden/);
+  expect(snapshotSchema.parse(await rpc(admin, "get_editor_snapshot", [saved.meetingId])).version).toBe(saved.version);
+});
+
+it("Data API no puede modificar ni eliminar un recurso ligado a revisión", async () => {
+  const resource = id(990);
+  const path = `${org}/${id(991)}.png`;
+  await db.query("insert into public.resources(id,org_id,title,storage_path,resource_type) values($1,$2,'Archivo ficticio',$3,'image')", [resource, org, path]);
+  const block = emptyBlock("Archivo publicado");
+  block.resourceIds = [resource];
+  const meeting = snapshotSchema.parse(await rpc(admin, "create_editor_meeting", [org, metadata, null]));
+  await rpc(admin, "publish_editor_snapshot", [meeting.meetingId, meeting.version, metadata, [block]]);
+  await expect(actor(admin, "update public.resources set storage_path=$2 where id=$1", [resource, `${org}/${id(992)}.png`])).rejects.toThrow(/permission denied/);
+  await expect(actor(admin, "delete from public.resources where id=$1", [resource])).rejects.toThrow(/permission denied/);
+  await expect(rpc(admin, "update_unlinked_url_resource", [resource, "Nuevo", "https://example.invalid", "link"])).rejects.toThrow(/Resource in use/);
+  expect((await db.query<{storage_path:string}>("select storage_path from public.resources where id=$1", [resource])).rows[0].storage_path).toBe(path);
+});
+
+it("duplicar sin responsables quita también persona de paralela", async () => {
+  const block = emptyBlock("Paralela sin copiar persona");
+  block.subactivities = [{clientKey: crypto.randomUUID(), title: "Paralela", teamId: id(201), personId: id(101), offsetSeconds: 0, durationSeconds: 60, notes: "", fieldSchema: [], customFields: {}}];
+  const meeting = snapshotSchema.parse(await rpc(admin, "create_editor_meeting", [org, metadata, null]));
+  const saved = snapshotSchema.parse(await rpc(admin, "save_editor_snapshot", [meeting.meetingId, meeting.version, metadata, [block]]));
+  const copy = snapshotSchema.parse(await rpc(admin, "duplicate_editor_meeting", [saved.meetingId, metadata, {...defaultCopyOptions, responsibles: false}]));
+  expect(copy.blocks[0].subactivities[0].personId).toBeNull();
+  expect(copy.blocks[0].subactivities[0].teamId).toBe(id(201));
+  expect(saved.blocks[0].subactivities[0].personId).toBe(id(101));
+});
+it("un enlace sin uso se actualiza y elimina solo mediante RPC estrecha", async () => {
+  const resource = id(993);
+  await db.query("insert into public.resources(id,org_id,title,url,resource_type) values($1,$2,'Antes','https://example.invalid','link')", [resource, org]);
+  await expect(actor(admin, "update public.resources set title='Mutado' where id=$1", [resource])).rejects.toThrow(/permission denied/);
+  await rpc(admin, "update_unlinked_url_resource", [resource, "Después", "https://example.invalid/nuevo", "link"]);
+  expect((await db.query<{title:string}>("select title from public.resources where id=$1", [resource])).rows[0].title).toBe("Después");
+  await expect(rpc(admin, "update_unlinked_url_resource", [resource, "Malo", "https://user@example.invalid", "link"])).rejects.toThrow(/Invalid resource/);
+  await rpc(admin, "delete_unlinked_url_resource", [resource]);
+  expect((await db.query("select id from public.resources where id=$1", [resource])).rows).toHaveLength(0);
 });

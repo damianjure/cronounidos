@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { editorContext } from "@/lib/editor/server";
+import { adminClient } from "@/lib/supabase/admin";
 import { hasResourceSignature, isResourceMimeType, resourceMimeTypes } from "@/lib/editor/upload-validation";
 
 const bucketName = "crono-resources";
@@ -23,13 +24,27 @@ async function validatedFile(form: FormData) {
   return { file, info: resourceMimeTypes[file.type] };
 }
 
+async function removeVerified(path: string) {
+  // The JWT-backed RPC authorizes queue membership; the secret client only removes bytes.
+  const bucket = adminClient().storage.from(bucketName);
+  const { error: removeError } = await bucket.remove([path]);
+  if (removeError) return false;
+  const slash = path.lastIndexOf("/");
+  const folder = path.slice(0, slash);
+  const name = path.slice(slash + 1);
+  const { data, error: listError } = await bucket.list(folder, {
+    limit: 100,
+    search: name,
+  });
+  return !listError && !data?.some((file) => file.name === name);
+}
+
 async function drainCleanup(a: Context) {
   for (let batch = 0; batch < 5; batch++) {
     const { data, error } = await a.client.rpc("pending_resource_file_cleanup", { p_org: a.orgId });
     if (error) return false;
     for (const row of data ?? []) {
-      const { error: removeError } = await a.client.storage.from(bucketName).remove([row.path]);
-      if (removeError) return false;
+      if (!(await removeVerified(row.path))) return false;
       const { error: ackError } = await a.client.rpc("ack_resource_file_cleanup", {
         p_org: a.orgId,
         p_path: row.path,
@@ -42,14 +57,18 @@ async function drainCleanup(a: Context) {
 }
 
 async function discardUploaded(a: Context, path: string) {
-  const { error } = await a.client.storage.from(bucketName).remove([path]);
-  if (!error) return true;
+  // Authorize and verify that no catalog row uses this path before privileged deletion.
   const { error: queueError } = await a.client.rpc("queue_unattached_resource_file", {
     p_org: a.orgId,
     p_path: path,
   });
   if (queueError) throw new Error("Archivo huérfano: se requiere limpieza manual.");
-  return false;
+  if (!(await removeVerified(path))) return false;
+  const { error: ackError } = await a.client.rpc("ack_resource_file_cleanup", {
+    p_org: a.orgId,
+    p_path: path,
+  });
+  return !ackError;
 }
 
 function finish(clean: boolean) {

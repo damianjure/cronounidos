@@ -56,8 +56,9 @@ test("drag por teclado mantiene alternativa accesible", async ({ page }) => {
   await page.keyboard.press("Space");
   await expect(handle).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("ArrowDown");
-  // dnd-kit updates keyboard collision after its sortable transition.
-  await page.waitForTimeout(450);
+  const target = page.locator(".editor-block").nth(1);
+  const targetKey = await target.getAttribute("data-drag-key");
+  await expect(page.locator(".editor-timeline")).toHaveAttribute("data-drag-over", targetKey!);
   await page.keyboard.press("Space");
   await expect(page.locator(".editor-block").first()).toContainText(
     "Alabanza y Adoración",

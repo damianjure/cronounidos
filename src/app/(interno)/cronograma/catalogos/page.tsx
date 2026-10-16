@@ -92,7 +92,7 @@ export default async function Catalogos({
                     ))}
                   </select>
                 </label>
-                <Button variant="outline">Actualizar plantilla para futuras reuniones</Button>
+                <Button variant="outline" className="catalog-template-action">Actualizar plantilla para futuras reuniones</Button>
               </form>
               <details>
                 <summary>Aplicar v{row.definition_version} a reuniones existentes</summary>

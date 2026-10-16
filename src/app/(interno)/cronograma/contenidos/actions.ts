@@ -25,14 +25,25 @@ export async function saveCatalogItem(form: FormData) {
   if (id) {
     const validId = z.uuid().safeParse(id);
     if (!validId.success) redirect("/cronograma/contenidos?error=datos");
-    const { data, error } = await a.client
-      .from(kind.data)
-      .update(values)
-      .eq("org_id", a.orgId)
-      .eq("id", validId.data)
-      .select("id")
-      .maybeSingle();
-    if (error || !data) redirect("/cronograma/contenidos?error=guardar");
+    if (kind.data === "resources") {
+      const resource = values as { title: string; url: string; resource_type: string };
+      const { error } = await a.client.rpc("update_unlinked_url_resource", {
+        p_resource: validId.data,
+        p_title: resource.title,
+        p_url: resource.url,
+        p_resource_type: resource.resource_type,
+      });
+      if (error) redirect("/cronograma/contenidos?error=guardar");
+    } else {
+      const { data, error } = await a.client
+        .from(kind.data)
+        .update(values)
+        .eq("org_id", a.orgId)
+        .eq("id", validId.data)
+        .select("id")
+        .maybeSingle();
+      if (error || !data) redirect("/cronograma/contenidos?error=guardar");
+    }
   } else {
     const { error } = await a.client.from(kind.data).insert({
       ...values,
@@ -49,13 +60,20 @@ export async function deleteCatalogItem(form: FormData) {
   if (!kind.success || !id.success)
     redirect("/cronograma/contenidos?error=datos");
   const a = await editorContext();
-  const { data, error } = await a.client
-    .from(kind.data)
-    .delete()
-    .eq("org_id", a.orgId)
-    .eq("id", id.data)
-    .select("id")
-    .maybeSingle();
-  if (error || !data) redirect("/cronograma/contenidos?error=uso");
+  if (kind.data === "resources") {
+    const { error } = await a.client.rpc("delete_unlinked_url_resource", {
+      p_resource: id.data,
+    });
+    if (error) redirect("/cronograma/contenidos?error=uso");
+  } else {
+    const { data, error } = await a.client
+      .from(kind.data)
+      .delete()
+      .eq("org_id", a.orgId)
+      .eq("id", id.data)
+      .select("id")
+      .maybeSingle();
+    if (error || !data) redirect("/cronograma/contenidos?error=uso");
+  }
   done();
 }

@@ -10,6 +10,11 @@ export function SortableBlock({
   count,
   selected,
   busy,
+  keyboardActive,
+  keyboardTarget,
+  onKeyboardToggle,
+  onKeyboardMove,
+  onKeyboardCancel,
   onSelect,
   onMove,
   onDuration,
@@ -22,6 +27,11 @@ export function SortableBlock({
   count: number;
   selected: boolean;
   busy: boolean;
+  keyboardActive: boolean;
+  keyboardTarget: boolean;
+  onKeyboardToggle: () => void;
+  onKeyboardMove: (offset: number) => void;
+  onKeyboardCancel: () => void;
   onSelect: () => void;
   onMove: (offset: number) => void;
   onDuration: (seconds: number) => void;
@@ -43,7 +53,8 @@ export function SortableBlock({
         transform: CSS.Transform.toString(transform),
         transition: transition,
       }}
-      className={`editor-block ${selected ? "selected" : ""}`}
+      data-drag-key={block.clientKey}
+      className={`editor-block ${selected ? "selected" : ""} ${keyboardTarget ? "keyboard-target" : ""}`}
     >
       <button
         ref={setActivatorNodeRef}
@@ -52,6 +63,19 @@ export function SortableBlock({
         disabled={busy}
         {...attributes}
         {...listeners}
+        aria-pressed={keyboardActive}
+        onKeyDown={(event) => {
+          if (event.code === "Space" || event.code === "Enter") {
+            event.preventDefault();
+            onKeyboardToggle();
+          } else if (keyboardActive && (event.code === "ArrowDown" || event.code === "ArrowUp")) {
+            event.preventDefault();
+            onKeyboardMove(event.code === "ArrowDown" ? 1 : -1);
+          } else if (keyboardActive && event.code === "Escape") {
+            event.preventDefault();
+            onKeyboardCancel();
+          }
+        }}
       >
         <GripVertical size={21} />
       </button>

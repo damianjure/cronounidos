@@ -352,6 +352,7 @@ export function copyForPreview(
             clientKey: crypto.randomUUID(),
             notes: options.notes ? s.notes : "",
             customFields: options.notes ? { ...s.customFields } : {},
+            personId: options.responsibles ? s.personId : null,
           })),
         }))
       : [],

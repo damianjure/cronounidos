@@ -266,3 +266,17 @@ it.each(["not-a-url", "https://", ""])(
   "enlace malformado %s devuelve error, no lanza excepción",
   (value) => expect(safeUrl.safeParse(value).success).toBe(false),
 );
+it("duplicación de vista previa no copia responsables de paralelas", () => {
+  const source = fixture();
+  const personId = crypto.randomUUID();
+  const teamId = crypto.randomUUID();
+  source.blocks[0].subactivities.push({
+    clientKey: crypto.randomUUID(), title: "Paralela ficticia",
+    teamId, personId, offsetSeconds: 0, durationSeconds: 60,
+    notes: "", fieldSchema: [], customFields: {},
+  });
+  const copy = copyForPreview(source, { ...defaultCopyOptions, responsibles: false });
+  expect(copy.blocks[0].subactivities[0].personId).toBeNull();
+  expect(copy.blocks[0].subactivities[0].teamId).toBe(teamId);
+  expect(source.blocks[0].subactivities[0].personId).toBe(personId);
+});

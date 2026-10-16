@@ -1,5 +1,6 @@
 import { expect, request as apiRequest, test, type Page } from "@playwright/test";
 import path from "node:path";
+import { createClient } from "@supabase/supabase-js";
 
 const email = "e2e-admin@cronounidos.invalid";
 
@@ -85,10 +86,29 @@ test("contenidos y Storage privado: crea catálogo, sube PNG y exige sesión", a
   const replacement = row.locator("details").filter({ has: page.locator("summary", { hasText: "Reemplazar archivo privado" }) });
   await replacement.locator("summary").click();
   const previousPath = await replacement.locator('input[name="oldPath"]').inputValue();
+  const storageClient = createClient(process.env.E2E_SUPABASE_URL!, process.env.E2E_PUBLISHABLE_KEY!, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const signedIn = await storageClient.auth.signInWithPassword({ email, password: process.env.E2E_TEST_PASSWORD! });
+  expect(signedIn.error).toBeNull();
+  const existsForUser = async (filePath: string) => {
+    const slash = filePath.lastIndexOf("/");
+    const { data, error } = await storageClient.storage.from("crono-resources").list(filePath.slice(0, slash), { search: filePath.slice(slash + 1), limit: 100 });
+    expect(error).toBeNull();
+    return data?.some((entry) => entry.name === filePath.slice(slash + 1)) ?? false;
+  };
+  expect(await existsForUser(previousPath)).toBe(true);
+  const deniedDirectDelete = await storageClient.storage.from("crono-resources").remove([previousPath]);
+  expect(deniedDirectDelete.error).toBeNull();
+  expect(deniedDirectDelete.data).toHaveLength(0);
+  expect(await existsForUser(previousPath)).toBe(true);
   await replacement.locator('input[type="file"]').setInputFiles(path.resolve("public/icons/icon-512.png"));
   await replacement.getByRole("button", { name: "Reemplazar archivo" }).click();
   await expect.poll(() => page.locator("li").filter({ has: page.getByRole("heading", { name: fileName }) }).locator('input[name="oldPath"]').first().inputValue()).not.toBe(previousPath);
   await expect(page.getByRole("status")).toContainText("Catálogo actualizado");
+  const newPath = await page.locator("li").filter({ has: page.getByRole("heading", { name: fileName }) }).locator('input[name="oldPath"]').first().inputValue();
+  expect(await existsForUser(previousPath)).toBe(false);
+  expect(await existsForUser(newPath)).toBe(true);
   const replaced = await page.context().request.get(resourceUrl!, { maxRedirects: 0 });
   expect(replaced.status()).toBe(307);
   const updatedRow = page.locator("li").filter({ has: page.getByRole("heading", { name: fileName }) });
@@ -100,6 +120,7 @@ test("contenidos y Storage privado: crea catálogo, sube PNG y exige sesión", a
   await expect(page.getByRole("status")).toContainText("Catálogo actualizado");
   const removed = await page.context().request.get(resourceUrl!, { maxRedirects: 0 });
   expect(removed.status()).toBe(404);
+  expect(await existsForUser(newPath)).toBe(false);
 });
 
 test("tipos y plantillas: crea tipo versionado y guarda estructura", async ({ page }, info) => {
@@ -146,6 +167,13 @@ test("tipos y plantillas: crea tipo versionado y guarda estructura", async ({ pa
   await expect(page).toHaveURL(/\/cronograma\/[0-9a-f-]{36}$/);
   await page.goto("/cronograma/catalogos");
   const templateRow = page.locator("li").filter({ has: page.getByRole("heading", { name: new RegExp(templateName) }) });
+  const actionFits = await templateRow.evaluate((row) => {
+    const button = row.querySelector<HTMLButtonElement>(".catalog-template-action")!;
+    const buttonBox = button.getBoundingClientRect();
+    const rowBox = row.getBoundingClientRect();
+    return { left: buttonBox.left, right: buttonBox.right, rowLeft: rowBox.left, rowRight: rowBox.right };
+  });
+  expect(actionFits.left >= actionFits.rowLeft && actionFits.right <= actionFits.rowRight - 8).toBe(true);
   const selective = templateRow.locator("details").filter({ has: page.locator("summary", { hasText: "Aplicar v1 a reuniones existentes" }) });
   await selective.locator("summary").click();
   await selective.getByLabel(new RegExp(selectedName)).check();

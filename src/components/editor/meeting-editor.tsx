@@ -6,7 +6,6 @@ import {
   DndContext,
   MouseSensor,
   TouchSensor,
-  KeyboardSensor,
   useSensor,
   useSensors,
   closestCenter,
@@ -15,7 +14,6 @@ import {
 import {
   SortableContext,
   verticalListSortingStrategy,
-  sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { ArrowUp, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -124,6 +122,7 @@ export function MeetingEditor({
   const [snapshot, setSnapshot] = useState(initial);
   const [selected, setSelected] = useState(initial.blocks[0]?.clientKey ?? "");
   const [busy, setBusy] = useState(false);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const pending = useRef(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -135,13 +134,11 @@ export function MeetingEditor({
   const [role, setRole] = useState("");
   const durationBefore = useRef<EditorSnapshot | null>(null);
   const router = useRouter();
+  const [keyboardDrag, setKeyboardDrag] = useState<{ key: string; target: number } | null>(null);
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 7 } }),
     useSensor(TouchSensor, {
       activationConstraint: { delay: 180, tolerance: 5 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
   const times = plannedTimes(snapshot.metadata, snapshot.blocks);
@@ -225,7 +222,27 @@ export function MeetingEditor({
       blocks: reorder(snapshot.blocks, key, index + offset),
     });
   }
+  function keyboardToggle(key: string) {
+    if (keyboardDrag?.key === key) {
+      const before = snapshot.blocks.findIndex((block) => block.clientKey === key);
+      const target = keyboardDrag.target;
+      setKeyboardDrag(null);
+      if (before !== target) void persist({
+        ...snapshot,
+        blocks: reorder(snapshot.blocks, key, target),
+      });
+      return;
+    }
+    const index = snapshot.blocks.findIndex((block) => block.clientKey === key);
+    if (index >= 0) setKeyboardDrag({ key, target: index });
+  }
+  function keyboardMove(key: string, offset: number) {
+    setKeyboardDrag((current) => current?.key === key ? {
+      key, target: Math.max(0, Math.min(snapshot.blocks.length - 1, current.target + offset)),
+    } : current);
+  }
   function dragEnd(event: DragEndEvent) {
+    setDragOverId(null);
     if (!event.over || event.active.id === event.over.id) return;
     const target = snapshot.blocks.findIndex(
       (b) => b.clientKey === event.over?.id,
@@ -417,13 +434,15 @@ export function MeetingEditor({
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
+            onDragOver={(event) => setDragOverId(event.over ? String(event.over.id) : null)}
+            onDragCancel={() => setDragOverId(null)}
             onDragEnd={dragEnd}
           >
             <SortableContext
               items={snapshot.blocks.map((b) => b.clientKey)}
               strategy={verticalListSortingStrategy}
             >
-              <ol className="editor-timeline">
+              <ol className="editor-timeline" data-drag-over={keyboardDrag ? snapshot.blocks[keyboardDrag.target]?.clientKey : dragOverId ?? undefined}>
                 {snapshot.blocks.map((b, index) => (
                   <SortableBlock
                     key={b.clientKey}
@@ -433,6 +452,11 @@ export function MeetingEditor({
                     count={snapshot.blocks.length}
                     selected={selected === b.clientKey}
                     busy={busy}
+                    keyboardActive={keyboardDrag?.key === b.clientKey}
+                    keyboardTarget={keyboardDrag?.key === b.clientKey && keyboardDrag.target === index}
+                    onKeyboardToggle={() => keyboardToggle(b.clientKey)}
+                    onKeyboardMove={(offset) => keyboardMove(b.clientKey, offset)}
+                    onKeyboardCancel={() => setKeyboardDrag(null)}
                     onSelect={() => setSelected(b.clientKey)}
                     onMove={(offset) => void move(b.clientKey, offset)}
                     onDuration={(seconds) =>
