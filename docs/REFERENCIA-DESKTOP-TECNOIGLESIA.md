@@ -1,5 +1,7 @@
 # Revisión UX/UI del dashboard
 
+**Actualización:** mejora desktop implementada y validada después de esta revisión; ver `DESKTOP-EDITOR.md`. Este archivo conserva la evidencia de referencia y sus límites.
+
 **Fecha:** 17/10/2026. **Objetivo:** aprovechar patrones de carga de servicios/reuniones de Tecnoiglesia One para Crono Unidos, sin reemplazar el PRD ni aprobar funcionalidades adicionales.
 
 ## Diagnóstico general

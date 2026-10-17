@@ -15,7 +15,7 @@
 | Feedback +10 min in-app, panel solo admin | ✅ Sprint 5 (in-app) |
 | Correo de feedback (Brevo) | ✅ Aceptación y recepción del aviso técnico verificadas en Gmail/Promociones; Production pendiente |
 
-Última CI remota verde comprobada: **`34aa19a` (run 39030215209)**, con foundation y authenticated-local aprobados. F1–F4 reparados en `bd76ed4`, `b219ae3` y `52f01bc`: lint sin warnings, typecheck, **239 tests / 19 suites**, build y **54 E2E Chrome** aprobados. Estrés SQL aislado de 200/1000 usuarios también aprobado. Correcciones pusheadas y desplegadas en Preview Ready; smoke remoto y aviso seguro de administración verificados. Ver resolución en `REVIEW-2026-10-17-CODEX.md`.
+Última CI remota verde comprobada: **`96c0f9d` (run 39051769548)**, foundation y authenticated-local aprobados: lint sin warnings, typecheck, **245 tests / 20 suites**, build y **62 E2E Chrome** (38 base + 24 autenticados). Incluye las reparaciones F1–F4 y la nueva mejora desktop; las ocho combinaciones móviles de los tests nuevos de desktop no aplican, sin omitir las regresiones móviles existentes. Preview **Ready**, `dpl_BocfkH3XhVQMMd51mEvyUwvqUJve`, `gru1`; selector demo y editor real verificados sin escrituras. Estrés SQL de 200/1000 usuarios conserva la evidencia anterior; no se repitió por este cambio de UI. Ver `DESKTOP-EDITOR.md`.
 
 ## Gates antes de Production
 
@@ -46,11 +46,11 @@ Ver `REVIEW-2026-10-17.md`. La concurrencia y los cortes pasaron sin pérdidas n
 
 ## Próximos pasos sugeridos
 
-**Mejora desktop autorizada:** implementada y verificada localmente (`b462517`, `33712d6`): alta guiada, cabecera/acciones compactas, detalle por secciones, búsqueda de bibliotecas/personas y feedback de movimiento/guardado. Lint/tipos/build y **245 tests**, Chrome **38 base + 24 autenticados** aprobados. [Entrega y límites](DESKTOP-EDITOR.md). Push/CI/Preview de esta mejora pendientes de verificar. Rediseño móvil pospuesto por el propietario; sus regresiones existentes siguen pasando. Sin migraciones, cambios de secretos ni activación de Production.
+**Mejora desktop autorizada:** implementada y verificada localmente (`b462517`, `33712d6`): alta guiada, cabecera/acciones compactas, detalle por secciones, búsqueda de bibliotecas/personas y feedback de movimiento/guardado. Lint/tipos/build y **245 tests**, Chrome **38 base + 24 autenticados** aprobados. [Entrega y límites](DESKTOP-EDITOR.md). Pusheada hasta `96c0f9d`; CI 39051769548 aprobada y Preview Ready verificada. Los cambios documentales posteriores no modifican el código probado. Rediseño móvil pospuesto por el propietario; sus regresiones existentes siguen pasando. Sin migraciones, cambios de secretos ni activación de Production.
 
 1. Completar instalación/recorrido de la PWA en Android e iPhone. Preview ya está desplegada; la región `gru1` no requiere otro cambio de infraestructura.
 2. Completar los gates abiertos (seguridad, QA remota, PWA física, alias de respuestas y Production) y operar **una reunión real** con 2–3 líderes antes de sumar funcionalidades.
-3. Deuda técnica: dividir `meeting-editor.tsx` (plan en `IMPLEMENTATION-NOTES.md`).
+3. Configurar los tipos de actividad reales desde Tipos y plantillas: el selector remoto solo ofrece Actividad personalizada. No se cargaron semillas. Deuda técnica: continuar la extracción del editor (plan en `IMPLEMENTATION-NOTES.md`); picker, catálogos y aviso de cambios ya se separaron.
 
 ### Referencia UX desktop — 17/10/2026
 

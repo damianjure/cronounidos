@@ -53,4 +53,10 @@ Logs locales: `/tmp/crono-desktop-{red,check,check-2,check-3,release-check,cover
 
 ## Servicios
 
-Validación local completada. Push a la rama Preview, CI nueva y despliegue remoto se verifican a continuación antes de declararlos aprobados. No se activa Production ni se dan por cerrados los gates remotos/operativos de `STATUS.md`.
+Commits pusheados a `codex/sprint-2-editor` hasta **`96c0f9d`**. CI **39051769548 success**, ambos jobs: 245 tests, 38 E2E base y 24 autenticados aprobados; sin casos flaky/retries registrados. Preview **Ready** `dpl_BocfkH3XhVQMMd51mEvyUwvqUJve`, funciones `gru1`, alias estable de rama. Los cambios documentales posteriores no alteran ese código.
+
+Comprobaciones remotas limitadas: manifest 200; cronograma sin sesión 307 a ingreso; worker sin secreto 401/unauthorized, sin operar la cola. Chrome abrió la demo nueva, selector con foco inicial en búsqueda y cancelación sin agregar bloques. Después abrió la agenda y un borrador real con la sesión existente: datos/acciones cargaron sin error de catálogo, publicación deshabilitada al no tener bloques y sin cambios pendientes. Se abrió/canceló el selector, sin crear/publicar/cancelar reuniones ni modificar contenido real. Evidencia de UI en `/tmp/crono-desktop-evidence/`; captura remota del selector es demo, no personas reales.
+
+**Configuración pendiente de contenido:** el selector del borrador real solo ofreció Actividad personalizada; no hay tipos configurados en el catálogo consultado. Configurarlos mediante Tipos y plantillas antes de esperar tarjetas de Alabanza/Mensaje/etc. No se cargaron seeds ni se crearon tipos remotos por este cambio visual.
+
+No se activa Production ni se dan por cerrados los demás gates remotos/operativos de `STATUS.md`.
