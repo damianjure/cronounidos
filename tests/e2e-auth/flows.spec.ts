@@ -684,7 +684,7 @@ test('en vivo: dos dispositivos sincronizan, recuperan desconexión y cierran ex
    window.dispatchEvent(new Event('offline'));
   });
   await expect(page.getByRole('status')).toContainText('Sin conexión');
-  const delayedRead = page.waitForResponse(response => response.url().endsWith(`/en-vivo/${meeting.meetingId}`) && response.request().method() === 'POST');
+  const delayedRead = page.waitForResponse(response => response.url().endsWith('/rest/v1/rpc/get_live_snapshot') && response.request().method() === 'POST');
   releaseRead();
   await (await delayedRead).finished();
   // Let React consume the action response, rather than assert the pre-response state.
