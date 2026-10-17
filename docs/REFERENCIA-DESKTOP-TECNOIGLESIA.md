@@ -8,7 +8,7 @@ Se accedió a la [reunión indicada por el propietario](https://one.tecnoiglesia
 
 La referencia organiza el servicio por pestañas y ofrece un selector de tipos antes de mostrar el formulario del bloque. Esto es más orientador que presentar todos los campos posibles simultáneamente. Conviene adoptar esa jerarquía, no reproducir toda la pantalla: el banner y la repetición de horarios dejan poco lugar al programa. Crono Unidos ya tiene timeline y detalle lateral sticky; la mejora es de carga y densidad, no de backend.
 
-La reunión observada no tiene bloques, canciones ni personas programadas. No se pudo evaluar una fila poblada, arrastrar, comprobar recálculo, persistencia, errores de guardado ni comportamiento multiusuario. Se pidió una referencia poblada para continuar sin crear datos. No se realizó una auditoría de seguridad de Tecnoiglesia ni QA móvil de esa web.
+En el primer recorrido la reunión no tenía bloques, canciones ni personas programadas. El propietario cargó después tres bloques; ver el segundo recorrido al final. No se realizó una auditoría de seguridad de Tecnoiglesia ni QA móvil de esa web.
 
 ## Evidencia observada
 
@@ -154,3 +154,31 @@ Al implementar: lint + typecheck + unit/RLS + build + E2E desktop/mobile y revis
 ## Veredicto
 
 **Tomar el flujo y la jerarquía; no clonar la aplicación.** Primero una mejora acotada de alta de bloques, toolbar compacta y detalle contextual. La referencia con programa vacío no basta para decidir cómo reemplazar nuestras filas/reordenamiento. PDF, input list, rich text, playback/BPM y campos de asistentes/ubicación requieren decisión separada si se quieren incorporar. No se modificó el alcance del MVP, los sprints ni los gates pendientes de Production.
+
+## Segundo recorrido: tres bloques cargados — 17/10/2026
+
+El propietario cargó tres bloques en la misma reunión. Se verificaron el árbol accesible y la captura desktop de la lista poblada. Orden observado al comenzar: bienvenida (5 min), lectura sin título (1 min), mensaje (40 min). No se guardaron ni eliminaron contenidos desde Codex y no se consiguió ejecutar un cambio de orden.
+
+### Qué aporta la lista poblada
+
+- **Fila/tarjeta resumida:** handle de seis puntos a la izquierda, icono del tipo, título, duración, resumen de notas cuando existe y acciones a la derecha. La información opcional no ocupa espacio si está vacía.
+- **Edición diferenciada de movimiento:** el lápiz y el menú de tres puntos están separados del handle. Se abrió el menú del bloque intermedio: solo se observaron Duplicar/Eliminar, no Subir/Bajar. No se activó ninguna de esas dos acciones.
+- **Resumen de duración:** la interfaz mostró **46 de 90 minutos** y **44 minutos restantes**. La suma visible 5+1+40 es consistente. Esto es comprobación aritmética del estado mostrado, no prueba de actualización tras cambiar duraciones ni de un reloj en vivo.
+- **Notas contextuales:** las tarjetas con notas muestran un extracto y chevron. No se pudo confirmar el comportamiento de expansión durante este recorrido.
+- **Accesibilidad:** el árbol expone tres elementos `sortable` y un anuncio de drop en inglés con UUIDs internos. No basta para afirmar que el teclado funciona; para Crono Unidos conservar botones arriba/abajo y anuncios en español con nombre y posición, no IDs técnicos.
+
+### Cambios propuestos a partir de esta evidencia
+
+1. Usar filas compactas con icono de tipo y detalles opcionales progresivos; mantener en Crono Unidos la **hora calculada por bloque**, que no se vio en las tarjetas de esta captura.
+2. Separar claramente handle, selección/edición y menú secundario. No poner toda la tarjeta como zona de arrastre que compita con notas y enlaces.
+3. Mantener nuestros controles accesibles de movimiento aunque la referencia use handle. Durante drag, indicar origen/destino, desplazar las otras filas para anticipar la posición y conservar foco al soltar. Son requisitos propuestos, **no una animación de Tecnoiglesia que haya quedado verificada**.
+4. Mostrar duración total y fin calculado; si se incorpora una duración objetivo de reunión, distinguir tiempo planificado restante de tiempo restante en vivo. Esa duración objetivo es una decisión separada, no una columna nueva aprobada por esta inspección.
+5. Evitar el placeholder persistido «Sin título»: proponer nombre significativo según tipo y validación contextual sin impedir un borrador parcial válido.
+
+### Bloqueo concreto y límites
+
+El control nativo de Brave devolvió `noWindowsAvailable` al intentar scroll/coordenadas, aunque permitió leer accesibilidad/captura y abrir el menú. Escape/Cancel/recarga no mostraron un cambio verificable en ese estado. No se intentó borrar/duplicar para salir. La alternativa Chrome abrió la URL pero mostró una página oscura vacía y snapshot sin contenido; no se verificó sesión ni se ingresaron credenciales. Se pidió dejar Brave visible o abrir la referencia en Chrome.
+
+Por tanto, **no están verificados todavía**: trayectoria/animación del drag, movimiento arriba/abajo, restauración del orden, persistencia tras recargar, expansión de notas, edición del bloque existente y tiempos reales de carga. El anuncio accesible de un drop anterior no demuestra que Codex haya realizado ni observado el movimiento. No se atribuye el bloqueo de automatización a un defecto del sitio.
+
+La propuesta visual queda ampliada con filas reales; la prueba interactiva de movimiento sigue pendiente por acceso. No se modificó código de Crono Unidos, no se ejecutaron suites nuevas y no se cerraron gates de Production.

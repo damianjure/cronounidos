@@ -52,7 +52,7 @@ Ver `REVIEW-2026-10-17.md`. La concurrencia y los cortes pasaron sin pérdidas n
 
 ### Referencia UX desktop — 17/10/2026
 
-Se revisó Tecnoiglesia One en Brave con sesión existente: pestañas, selector de bloques, formularios de predicación/canción, biblioteca, alta de rol por área, recursos/notas, datos del servicio y selector vacío de plantillas. Formularios cancelados sin guardar; sin escrituras remotas. [Propuesta y límites](REFERENCIA-DESKTOP-TECNOIGLESIA.md): adoptar carga guiada por tipo, toolbar compacta y detalle contextual sobre el modelo actual. **Análisis, no rediseño implementado ni ampliación del PRD.** La reunión de referencia está vacía: falta una poblada para evaluar filas/reordenamiento; se solicitó al propietario. PWA física y gates de Production permanecen pendientes.
+Se revisó Tecnoiglesia One en Brave con sesión existente: pestañas, selector de bloques, formularios de predicación/canción, biblioteca, alta de rol por área, recursos/notas, datos del servicio y selector vacío de plantillas. Formularios cancelados sin guardar; sin escrituras remotas. [Propuesta y límites](REFERENCIA-DESKTOP-TECNOIGLESIA.md): adoptar carga guiada por tipo, toolbar compacta y detalle contextual sobre el modelo actual. **Análisis, no rediseño implementado ni ampliación del PRD.** El propietario cargó tres bloques: se verificaron filas con handle/icono/título/duración/notas/acciones y total 46/90 min (44 restantes). Movimiento/edición interactiva no verificados: Brave falla con `noWindowsAvailable` y Chrome alternativo mostró pantalla vacía; se solicitó dejar la ventana visible o abrirla en Chrome. No se reordenó ni eliminó ningún bloque. PWA física y gates de Production permanecen pendientes.
 
 ## Segunda revisión integral — 17/10/2026
 
