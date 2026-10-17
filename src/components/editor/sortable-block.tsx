@@ -45,7 +45,7 @@ export function SortableBlock({
     listeners,
     transform,
     transition,
-  } = useSortable({ id: block.clientKey, disabled: busy });
+  } = useSortable({ id: block.clientKey });
   return (
     <li
       ref={setNodeRef}
@@ -60,7 +60,6 @@ export function SortableBlock({
         ref={setActivatorNodeRef}
         className="drag-handle icon-button"
         aria-label={`Arrastrar ${block.name}`}
-        disabled={busy}
         {...attributes}
         {...listeners}
         aria-pressed={keyboardActive}
@@ -68,7 +67,10 @@ export function SortableBlock({
           if (event.code === "Space" || event.code === "Enter") {
             event.preventDefault();
             onKeyboardToggle();
-          } else if (keyboardActive && (event.code === "ArrowDown" || event.code === "ArrowUp")) {
+          } else if (
+            keyboardActive &&
+            (event.code === "ArrowDown" || event.code === "ArrowUp")
+          ) {
             event.preventDefault();
             onKeyboardMove(event.code === "ArrowDown" ? 1 : -1);
           } else if (keyboardActive && event.code === "Escape") {
@@ -122,7 +124,7 @@ export function SortableBlock({
       <div className="move-actions">
         <button
           className="icon-button"
-          disabled={busy || index === 0}
+          disabled={index === 0}
           aria-label={`Mover ${block.name} arriba`}
           onClick={() => onMove(-1)}
         >
@@ -130,7 +132,7 @@ export function SortableBlock({
         </button>
         <button
           className="icon-button"
-          disabled={busy || index === count - 1}
+          disabled={index === count - 1}
           aria-label={`Mover ${block.name} abajo`}
           onClick={() => onMove(1)}
         >
