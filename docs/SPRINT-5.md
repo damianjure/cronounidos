@@ -82,3 +82,12 @@ Chrome remoto con sesión administrativa: `/feedback` y `/feedback/admin` abrier
 Línea base de laboratorio móvil en `PERFORMANCE.md`: tres pasadas de portada local sin backend, Performance 89/99/99, Accessibility/Best Practices 100; se conserva variabilidad y alcance limitado. No sustituye pruebas con datos/backend real ni dispositivo físico.
 
 El bypass ya se guardó en Vault y se conectó el callback de Preview, pero la primera prueba HTTP fue rechazada por Vercel (401). La comparación interna detectó que el bypass de Vault coincide con el secreto del worker; se pidió corregir únicamente el primero. Canal desactivado, outbox vacío, sin correos. Ver `EMAIL.md`; no declarar email operativo.
+
+
+### Prueba remota con +10 minutos de reloj de pared
+
+Prueba técnica autorizada, sin personas/equipos adicionales: publicación por el propietario e inicio/cierre desde UI. Solicitud real creada **02:55:00.104152 UTC**, después del vencimiento **02:54:57.968343 UTC**. Aviso visible en Chrome, una solicitud/un aviso/una cuenta autorizada; no se adelantó la hora ni se invocó el dispatcher desde el navegador. No se respondió el formulario para preservar la prueba de correo.
+
+Brevo rechazó el único intento y mostró una IP de salida bloqueada coincidente. Outbox failed, attempts=1, sin aceptación. Canal nuevamente desactivado y comprobado con 503 del worker después de redeploy. Se pidió autorización para la IP puntual, sin cambios de seguridad global ni facturación; revisar estabilidad de egress antes de Production. Evidencia y limitaciones en `EMAIL.md`.
+
+CI del ajuste final de la E2E de desconexión: **38996521692 / 08a1c8f**, ambos jobs success. Sprint 5 continúa abierto por correo aceptado/recibido, QA remota restante y Production, no por falta de solicitud in-app real.
