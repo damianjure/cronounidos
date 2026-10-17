@@ -4,7 +4,7 @@ export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   test: {
     fsModuleCache: false,
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/**/*.test.{ts,mjs}"],
     testTimeout: 30000,
     hookTimeout: 30000,
     coverage: {
