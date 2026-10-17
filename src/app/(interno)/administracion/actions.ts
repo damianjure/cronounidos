@@ -46,12 +46,23 @@ export async function provisionUser(form: FormData) {
   } catch {
     redirect("/administracion?error=configuracion");
   }
-  const origin = process.env.APP_URL;
-  if (!origin) redirect("/administracion?error=configuracion");
+  let origin: string;
+  try {
+    const url = new URL(process.env.APP_URL ?? "");
+    if (
+      !["https:", "http:"].includes(url.protocol) ||
+      url.username ||
+      url.password
+    )
+      throw new Error("Invalid application origin");
+    origin = url.origin;
+  } catch {
+    redirect("/administracion?error=configuracion");
+  }
   const result =
     p.mode === "invite"
       ? await admin.auth.admin.inviteUserByEmail(p.email, {
-          redirectTo: `${new URL(origin).origin}/auth/confirm`,
+          redirectTo: `${origin}/auth/confirm`,
           data: { display_name: p.displayName },
         })
       : await admin.auth.admin.createUser({
@@ -61,20 +72,21 @@ export async function provisionUser(form: FormData) {
           user_metadata: { display_name: p.displayName },
         });
   if (result.error || !result.data.user) redirect("/administracion?error=alta");
-  const { error } = await c.rpc("register_invited_member", {
-    p_org: p.orgId,
-    p_user: result.data.user.id,
-  });
-  if (error) {
-    // Do not leave an orphan Auth account: delete the user just created so the
-    // admin can retry with the same email. If cleanup also fails, say so.
-    const { error: cleanupError } = await admin.auth.admin.deleteUser(
-      result.data.user.id,
-    );
-    redirect(
-      `/administracion?error=${cleanupError ? "membresia-huerfana" : "membresia"}`,
-    );
+  let membershipFailed = false;
+  try {
+    const { error } = await c.rpc("register_invited_member", {
+      p_org: p.orgId,
+      p_user: result.data.user.id,
+    });
+    membershipFailed = !!error;
+  } catch {
+    membershipFailed = true;
   }
+  // Invitation may return an EXISTING unconfirmed account. Even for create,
+  // a lost RPC response does not prove that membership creation rolled back.
+  // Preserve identity in both cases; do not compensate an uncertain outcome
+  // with a global Auth delete. An administrator must reconcile membership.
+  if (membershipFailed) redirect("/administracion?error=membresia");
   redirect("/administracion?ok=alta");
 }
 

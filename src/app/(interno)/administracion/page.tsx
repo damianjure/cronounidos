@@ -72,10 +72,8 @@ export default async function Admin({
         <p role="alert" className="notice error">
           No se completó la operación ({params.error}). Revisá los datos y la
           configuración.
-          {params.error === "membresia" &&
-            " Falló la membresía; la cuenta creada se eliminó y podés reintentar con el mismo correo."}
-          {params.error === "membresia-huerfana" &&
-            " Falló la membresía y no se pudo eliminar la cuenta creada: eliminala desde Supabase Auth antes de reintentar."}
+          {["membresia", "membresia-huerfana"].includes(params.error) &&
+            " No se pudo verificar la membresía. La cuenta de Auth se conservó por seguridad: revisá su membresía en Supabase antes de reintentar. No elimines una cuenta preexistente."}
         </p>
       )}
       {params.ok && (
@@ -265,7 +263,9 @@ export default async function Admin({
                 <form action={suspendMember}>
                   <input type="hidden" name="orgId" value={a.orgId} />
                   <input type="hidden" name="userId" value={m.user_id} />
-                  <SubmitButton variant="outline">Suspender acceso</SubmitButton>
+                  <SubmitButton variant="outline">
+                    Suspender acceso
+                  </SubmitButton>
                 </form>
               )}
               {m.status === "suspended" && (
@@ -273,7 +273,9 @@ export default async function Admin({
                   <input type="hidden" name="orgId" value={a.orgId} />
                   <input type="hidden" name="userId" value={m.user_id} />
                   <input type="hidden" name="role" value="member" />
-                  <SubmitButton variant="outline">Reaprobar acceso</SubmitButton>
+                  <SubmitButton variant="outline">
+                    Reaprobar acceso
+                  </SubmitButton>
                 </form>
               )}
             </li>
