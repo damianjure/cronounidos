@@ -76,3 +76,9 @@ Las credenciales avanzaron después de este checkpoint: API key real cargada por
 Remitente exclusivo de feedback creado/verificado en Brevo: `crono@damianjure.com`, nombre Crono Unidos, dominio autenticado y DMARC configurado. Agregadas variables Preview de esa identidad y `FEEDBACK_EMAIL_ENABLED=false` explícito, sin habilitar envíos. Falta confirmar bandeja/alias de respuestas; SMTP de Auth no cambió. Vault aún sin callback/bypass; se pidió al propietario completar la credencial dedicada de automatización, sin revelarla por chat. Outbox remoto vacío, jobs activos. Ver `EMAIL.md` para alcance exacto y pasos seguros.
 
 Chrome remoto con sesión administrativa: `/feedback` y `/feedback/admin` abrieron estados vacíos esperados, sin escrituras ni fixtures. No prueba entrega de feedback ni aislamiento con otras sesiones remotas. Production continúa pendiente.
+
+### Verificaciones adicionales
+
+Línea base de laboratorio móvil en `PERFORMANCE.md`: tres pasadas de portada local sin backend, Performance 89/99/99, Accessibility/Best Practices 100; se conserva variabilidad y alcance limitado. No sustituye pruebas con datos/backend real ni dispositivo físico.
+
+El bypass ya se guardó en Vault y se conectó el callback de Preview, pero la primera prueba HTTP fue rechazada por Vercel (401). La comparación interna detectó que el bypass de Vault coincide con el secreto del worker; se pidió corregir únicamente el primero. Canal desactivado, outbox vacío, sin correos. Ver `EMAIL.md`; no declarar email operativo.

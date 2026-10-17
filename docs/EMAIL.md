@@ -2,7 +2,7 @@
 
 ## Estado al 16/10/2026
 
-Código preparado y migraciones 30–33 aplicadas en local y en el proyecto independiente `ivmhgizuofxdvvvzdxnl` (33 en total). **Correo todavía desactivado**: `BREVO_API_KEY` ya está en Vercel Preview y el secreto de worker se generó en Infisical con copias iniciales en Vercel/Vault. El remitente exclusivo `crono@damianjure.com` ya está verificado en Brevo y configurado en Vercel Preview, con `FEEDBACK_EMAIL_ENABLED=false` explícito. Faltan callback/protección y prueba real; no se enviaron correos de feedback. Ver la actualización de Infisical al final antes de crear o rotar claves. La notificación in-app funciona sin este canal. Supabase Auth usa su configuración SMTP separada.
+Código preparado y migraciones 30–33 aplicadas en local y en el proyecto independiente `ivmhgizuofxdvvvzdxnl` (33 en total). **Correo todavía desactivado**: `BREVO_API_KEY` ya está en Vercel Preview y el secreto de worker se generó en Infisical con copias iniciales en Vercel/Vault. El remitente exclusivo `crono@damianjure.com` ya está verificado en Brevo y configurado en Vercel Preview, con `FEEDBACK_EMAIL_ENABLED=false` explícito. Callback creado, pero la prueba fue rechazada por Vercel: falta corregir el bypass de Vault (coincide con el secreto del worker), verificar acceso y hacer prueba real. No se enviaron correos de feedback. Ver la actualización de Infisical al final antes de crear o rotar claves. La notificación in-app funciona sin este canal. Supabase Auth usa su configuración SMTP separada.
 
 ## Diseño
 
@@ -96,3 +96,13 @@ En Vercel se agregaron `FEEDBACK_FROM_EMAIL=crono@damianjure.com` y `FEEDBACK_EM
 La consulta remota mostró outbox vacío, ambos jobs registrados/activos y ausencia de callback/bypass en Vault. La Preview mantiene Vercel Authentication. Se abrió el formulario **Add Bypass** y se pidió al propietario crear una credencial dedicada con nota `crono-unidos-feedback-preview`, guardándola directamente en Vault como `crono_unidos_feedback_vercel_bypass`, sin compartirla por chat ni revelar/modificar el bypass existente. No se creó esa credencial ni se amplió acceso automáticamente. El callback seguirá sin configurarse hasta verificar la protección; no activar el canal por el solo hecho de tener remitente.
 
 Verificación remota de interfaz con sesión administrativa existente: `/feedback` mostró el estado vacío de solicitudes y `/feedback/admin` abrió el panel sin reuniones cerradas. Fue lectura, sin fixtures ni respuestas inventadas; no sustituye el recorrido con solicitudes reales ni la QA de roles distintos.
+
+## Conexión Vault y diagnóstico del bypass — 16/10/2026
+
+El propietario guardó `crono_unidos_feedback_vercel_bypass` en Vault. Se verificó existencia sin leer su valor. Se creó `crono_unidos_feedback_worker_url` apuntando a la URL estable de rama Preview + `/api/internal/feedback-email`; no se modificaron secretos existentes.
+
+Con outbox remoto vacío y canal todavía desactivado se hizo **una prueba HTTP explícita** desde pg_net usando ambos headers de Vault, sin imprimirlos; quedó registrada en dispatches con request ID **1**. Respuesta **401**, JSON de Deployment Protection (no el `unauthorized` de la app), sin timeout/error de transporte. No se declara conexión exitosa por el simple hecho de haber creado la URL. No hubo envío ni reclamo de correo.
+
+Comprobaciones internas booleanas: valor sin CR/LF ni espacios de borde y longitud válida; **bypass igual al secreto de worker**. Se pidió al propietario corregir solo `crono_unidos_feedback_vercel_bypass` con la credencial dedicada de Vercel, distinta de `crono_unidos_feedback_worker_secret`. No se mostraron hashes/valores, no se rotó el worker y no se revocó el bypass anterior de Vercel. Repetir la prueba tras la corrección: el resultado esperado con canal desactivado es **503 / email_not_configured** de la app, no un 401 de Vercel.
+
+La URL ya existe; los jobs automáticos no hacen HTTP mientras la cola siga vacía. No habilitar el canal hasta resolver el acceso, revisar destinatario y realizar prueba controlada. Si se agregan reuniones entretanto, no confundir el error de protección con un fallo de Brevo.
