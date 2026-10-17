@@ -2,7 +2,7 @@
 
 > Documento vivo de una página. Actualizarlo en cada cambio de estado. Los `SPRINT-*.md`, `EMAIL.md` y `SETUP.md` conservan el historial y la evidencia detallada.
 
-**Última actualización:** 17/10/2026 · rama `codex/sprint-2-editor` · Production **deshabilitada** · Preview protegida en Vercel · Supabase independiente `ivmhgizuofxdvvvzdxnl` (33 migraciones, sin seed).
+**Última actualización:** 17/10/2026 · rama `codex/sprint-2-editor` · Production **deshabilitada** · Preview protegida en Vercel · Supabase independiente `ivmhgizuofxdvvvzdxnl` (33 migraciones; sin seed general, con dataset DEMO autorizado).
 
 ## Qué funciona (verificado en local/CI/Preview)
 
@@ -50,7 +50,7 @@ Ver `REVIEW-2026-10-17.md`. La concurrencia y los cortes pasaron sin pérdidas n
 
 1. Completar instalación/recorrido de la PWA en Android e iPhone. Preview ya está desplegada; la región `gru1` no requiere otro cambio de infraestructura.
 2. Completar los gates abiertos (seguridad, QA remota, PWA física, alias de respuestas y Production) y operar **una reunión real** con 2–3 líderes antes de sumar funcionalidades.
-3. Configurar los tipos de actividad reales desde Tipos y plantillas: el selector remoto solo ofrece Actividad personalizada. No se cargaron semillas. Deuda técnica: continuar la extracción del editor (plan en `IMPLEMENTATION-NOTES.md`); picker, catálogos y aviso de cambios ya se separaron.
+3. Configurar los tipos de actividad reales desde Tipos y plantillas: ahora hay 12 tipos DEMO creados a pedido del propietario; no sustituyen la configuración real ni se ejecutó el seed general. Deuda técnica: continuar la extracción del editor (plan en `IMPLEMENTATION-NOTES.md`); picker, catálogos y aviso de cambios ya se separaron.
 
 ### Referencia UX desktop — 17/10/2026
 
@@ -69,3 +69,10 @@ F1 conserva Auth y exige reconciliación ante errores de membresía (14 pruebas 
 ### Avance de Preview y correo — 17/10/2026
 
 Cuatro commits hasta `34aa19a` pusheados a `codex/sprint-2-editor`. Preview **Ready**, `dpl_23o524cSA1jstjv56QxpkvpPYbK7`, funciones `gru1`; CI **39030215209 aprobada**. Smoke: manifest 200, cronograma sin sesión 307 a ingreso, worker sin secreto 401. Chrome con sesión existente muestra el nuevo aviso seguro de membresía (solo lectura; no se simuló fallo de alta remoto). Correo técnico anterior recibido en Gmail/Promociones, correlacionado por Message-ID; sin reenvío. Production no activa, rama main y sin variables; sin cambios de configuración.
+
+
+## Datos ficticios autorizados — 17/10/2026
+
+Carga terminada en Preview: **3 reuniones nuevas en borrador (12/8/4 bloques; 120/75/45 min)**, **20 personas del directorio**, **6 equipos**, **20 roles funcionales**, 12 tipos de bloque y 3 tipos de reunión. Incluye 3 tareas paralelas, 14 puestos y 51 asignaciones pendientes. No son cuentas ni roles de acceso. Las dos reuniones previas se conservaron; Auth/perfiles/membresías/grants y outbox sin cambios. Sin publicación, invitaciones, envío de correos ni activación de Production.
+
+[Manifiesto, método y verificación](DATOS-DEMO.md). Alta de los tres borradores por UI autenticada; población ficticia administrativa mediante una transacción acotada al proyecto/organización/IDs, probada antes en PGlite. No equivale a probar altas/asignaciones mediante la UI ni permisos multirol. Chrome confirmó los tres editores, horarios, responsables y directorio. Los gates de Production no cambian.
