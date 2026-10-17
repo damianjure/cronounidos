@@ -1,6 +1,8 @@
-# Correo de feedback — implementación y activación pendiente
+# Correo de feedback — Preview verificada, Production pendiente
 
-## Estado al 16/10/2026
+> **Estado vigente 17/10/2026:** recepción del aviso técnico verificada por metadata de Gmail (bandeja de entrada, categoría Promociones), con coincidencia exacta entre Message-ID recibido y provider_message_id del outbox accepted. SPF, DKIM y DMARC pasaron. No se envió otro correo ni se marcó como leído. Esto verifica ese envío de Preview; no configura SMTP de Auth ni variables de Production, y tampoco demuestra que el remitente tenga una bandeja/alias para recibir respuestas.
+
+## Checkpoint histórico al 16/10/2026
 
 Código preparado y migraciones 30–33 aplicadas en local y en el proyecto independiente `ivmhgizuofxdvvvzdxnl` (33 en total). **Prueba real ejecutada: in-app correcto, Brevo rechazó la IP; canal nuevamente desactivado**: `BREVO_API_KEY` ya está en Vercel Preview y el secreto de worker se generó en Infisical con copias iniciales en Vercel/Vault. El remitente exclusivo `crono@damianjure.com` ya está verificado en Brevo y configurado en Vercel Preview, con `FEEDBACK_EMAIL_ENABLED=false` tras un único intento rechazado. Callback y acceso protegido verificados después de corregir el bypass de Vault: la segunda prueba llegó al worker y obtuvo el 503 esperado con canal desactivado. El scheduler creó una solicitud y un aviso luego de +10 min; el envío fue rechazado y no hubo aceptación ni recepción confirmadas. Ver la actualización de Infisical al final antes de crear o rotar claves. La notificación in-app funciona sin este canal. Supabase Auth usa su configuración SMTP separada.
 
@@ -160,3 +162,7 @@ Decisión del propietario: **desactivar el bloqueo de IP para API en Brevo** (Se
 - La única fila del outbox (`failed`, 2 intentos, `provider_rejected`) se reencoló manualmente: `status='retry'`, `first_attempt_at=null` (nueva ventana de 10 min), `next_attempt_at=now()`. Se conservaron los intentos previos, la auditoría y el remitente congelado `crono@damianjure.com`. No hubo riesgo de duplicado porque Brevo nunca había aceptado esa idempotency key.
 - `FEEDBACK_EMAIL_ENABLED=true` se configuró solo en Preview (rama `codex/sprint-2-editor`), con redeploy `dpl_37jfCp79RBCtidHrw1CoY8kRYFz5` del commit `08a1c8f`. Production no se tocó.
 - Resultado: outbox **accepted** en el intento 3, `accepted_at=2026-10-17 04:05:03 UTC`, con `provider_message_id` guardado. Esto confirma la **aceptación por Brevo**; la recepción en la bandeja la confirma el propietario.
+
+## Recepción comprobada sin reenvío — 17/10/2026
+
+Consulta acotada en Gmail por remitente/asunto/fecha, lectura de headers sin cuerpo ni adjuntos. El correo de la prueba técnica está en **INBOX / CATEGORY_PROMOTIONS**, recibido el **17/10/2026 04:05:03 UTC**. Comprobación de solo lectura en el Supabase independiente: outbox accepted, tres intentos y **Message-ID recibido igual al provider_message_id**, sin publicar IDs de correo, enlaces de seguimiento ni headers completos. Autenticación SPF/DKIM/DMARC pass. Se cierra el pendiente de recepción técnica de ese aviso; no implica que el propietario ya lo haya abierto ni que todos los destinatarios futuros reciban en Principal. No se cambió la bandera de envío, remitente, SMTP, seguridad de Brevo ni Production.

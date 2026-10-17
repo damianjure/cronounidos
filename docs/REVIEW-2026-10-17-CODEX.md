@@ -6,7 +6,7 @@
 
 ## Estado posterior de los hallazgos
 
-**F1–F4 reparados y verificados localmente**, después de este review. Ver la resolución al final. Push, nueva CI y Preview de las correcciones pendientes. El dictamen y las reproducciones siguientes conservan el estado original de `87f67ae`.
+**F1–F4 reparados y verificados localmente**, después de este review. Ver la resolución al final. Correcciones pusheadas hasta `34aa19a` y Preview Ready verificada; CI 39030215209 aprobada (foundation y authenticated-local). El dictamen y las reproducciones siguientes conservan el estado original de `87f67ae`.
 
 ## Dictamen
 
@@ -138,3 +138,11 @@ La primera corrida del arnés nuevo terminó **exit 1**, aunque las aserciones d
 Logs: `/tmp/crono-repair-{check,final-check,final-lint,auth,base,coverage}.log`, `/tmp/crono-repair-admin-red.log`, `/tmp/crono-repair-stress-red.log`, `/tmp/crono-repair-stress-200.log` (primer fallo del fixture), `/tmp/crono-repair-stress-200-final.log` y `/tmp/crono-repair-stress-1000.log`. Traces autenticados siguen siendo locales y no deben publicarse.
 
 **Estado:** reparaciones locales completadas, commits pequeños, sin push, nueva CI ni deploy todavía. Sigue pendiente la verificación de las correcciones en Preview, además de todos los gates operativos/Production enumerados arriba. `.clauderules` se conserva ajeno a estos cambios. No hay nuevas claves, migraciones ni configuración remota.
+
+### Verificación posterior en servicios — 17/10/2026
+
+Correcciones pusheadas hasta `34aa19a`. Preview `dpl_23o524cSA1jstjv56QxpkvpPYbK7` **Ready**, `gru1`; CI 39030215209 en curso en este checkpoint. Manifest HTTP 200, ruta interna sin sesión 307 a ingreso y worker sin secreto 401. Chrome remoto con la sesión administrativa existente muestra el mensaje corregido de membresía; se verificó mediante query de error, **no** provocando un fallo ni borrando/creando cuentas remotas. No es QA completa de roles.
+
+Gmail confirmó recepción del aviso técnico anterior en Entrada/Promociones a las 04:05:03 UTC; una comparación SQL booleana confirmó que Message-ID coincide con el outbox accepted. SPF/DKIM/DMARC pass. No se enviaron correos ni se marcó como leído. Se cierra ese gate de recepción, no el alias de respuestas ni SMTP/variables de Production. Preflight Vercel: main, live=false, target inicial CANCELED y cero variables de Production. El propietario dispone de Android e iPhone para la siguiente prueba física; todavía no se declara aprobada.
+
+Cierre de CI: run **39030215209**, head `34aa19a`, conclusión **success** en ambos jobs (foundation y authenticated-local). Los cambios posteriores de esta documentación no modifican el código probado.
