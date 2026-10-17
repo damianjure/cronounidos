@@ -14,6 +14,20 @@ async function login(page: Page) {
   await expect(page).toHaveURL(/\/inicio$/);
 }
 
+async function addActivity(page: Page, typeName?: string) {
+  const guided = page.getByRole("button", { name: "Agregar bloque", exact: true }).first();
+  if (await guided.isVisible()) {
+    await guided.click();
+    const picker = page.getByRole("dialog", { name: "Agregar bloque" });
+    if (typeName) await picker.getByLabel("Buscar tipo de bloque").fill(typeName);
+    await picker.getByRole("button", { name: typeName ?? /Actividad personalizada/ }).click();
+    await picker.getByRole("button", { name: "Crear bloque", exact: true }).click();
+  } else {
+    if (typeName) await page.getByRole("combobox", { name: "Tipo de actividad" }).selectOption({ label: typeName });
+    await page.getByRole("button", { name: "Agregar actividad", exact: true }).click();
+  }
+}
+
 test("directorio: persona, equipo, rol e integrante por UI", async ({ page }, info) => {
   await login(page);
   await page.goto("/personas");
@@ -152,9 +166,9 @@ test("tipos y plantillas: crea tipo versionado y guarda estructura", async ({ pa
   await page.locator('input[name="date"]').fill("2026-11-16");
   await page.getByRole("button", { name: "Crear borrador" }).click();
   await expect(page).toHaveURL(/\/cronograma\/[0-9a-f-]{36}$/);
-  await page.getByRole("combobox", { name: "Tipo de actividad" }).selectOption({ label: typeName });
-  await page.getByRole("button", { name: "Agregar actividad" }).click();
+  await addActivity(page, typeName);
   await page.getByRole("button", { name: "Guardar borrador" }).click();
+  await page.locator(".editor-secondary > summary").click();
   await expect(page.getByRole("button", { name: "Guardar como plantilla" })).toBeEnabled();
   await page.getByRole("textbox", { name: "Nombre de la plantilla" }).fill(templateName);
   await page.getByRole("button", { name: "Guardar como plantilla" }).click();
@@ -230,17 +244,18 @@ test("edición parcial: notas, campos y enlaces no exponen otros bloques", async
   await page.getByRole("button", { name: "Crear borrador" }).click();
   await expect(page).toHaveURL(/\/cronograma\/[0-9a-f-]{36}$/);
   const meetingId = page.url().split("/").pop();
-  await page.getByRole("button", { name: "Agregar actividad" }).click();
+  await addActivity(page);
   await page.getByRole("combobox", { name: "Equipo principal" }).selectOption({ label: teamName });
   const teamId = await page.getByRole("combobox", { name: "Equipo principal" }).inputValue();
   await page.getByRole("textbox", { name: "Notas privadas" }).fill("Nota de mi equipo");
+  await page.locator(".advanced-fields > summary").click();
   await page.getByText("Agregar campo personalizado").click();
   await page.getByRole("textbox", { name: "Identificador" }).fill("guion_url");
   await page.getByRole("textbox", { name: "Etiqueta" }).fill("Guion del equipo");
   await page.getByRole("combobox", { name: "Tipo", exact: true }).selectOption("url");
   await page.getByRole("button", { name: "Agregar campo" }).click();
   await page.getByRole("textbox", { name: "Guion del equipo" }).fill("https://example.invalid/guion");
-  await page.getByRole("button", { name: "Agregar actividad" }).click();
+  await addActivity(page);
   await page.getByRole("textbox", { name: "Notas privadas" }).fill("Nota oculta de otro bloque");
   await page.getByRole("button", { name: "Guardar borrador" }).click();
   await expect(page.locator("p.notice[role=status]")).toContainText("Borrador guardado");

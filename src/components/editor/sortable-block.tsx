@@ -2,9 +2,11 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, ArrowUp, ArrowDown } from "lucide-react";
+import { BlockIcon } from "./block-icon";
 import type { EditorBlock } from "@/lib/editor/model";
 export function SortableBlock({
   block,
+  typeName,
   time,
   index,
   count,
@@ -22,6 +24,7 @@ export function SortableBlock({
   onBlurDuration,
 }: {
   block: EditorBlock;
+  typeName?: string;
   time: { label: string; dayOffset: number };
   index: number;
   count: number;
@@ -45,6 +48,7 @@ export function SortableBlock({
     listeners,
     transform,
     transition,
+    isDragging,
   } = useSortable({ id: block.clientKey });
   return (
     <li
@@ -54,6 +58,7 @@ export function SortableBlock({
         transition: transition,
       }}
       data-drag-key={block.clientKey}
+      data-dragging={isDragging || undefined}
       className={`editor-block ${selected ? "selected" : ""} ${keyboardTarget ? "keyboard-target" : ""}`}
     >
       <button
@@ -95,13 +100,29 @@ export function SortableBlock({
         aria-pressed={selected}
         onClick={onSelect}
       >
-        <strong>{block.name}</strong>
+        <span className="block-name-line">
+          <BlockIcon name={typeName ?? block.name} />
+          <strong>{block.name}</strong>
+        </span>
         <small>
           {block.subactivities.length
             ? `${block.subactivities.length} paralela(s)`
-            : "Actividad principal"}
+            : (typeName ?? "Actividad principal")}
           {block.visibility === "internal" ? " · Interna" : ""}
         </small>
+        {(block.responsibles.length > 0 || block.resourceIds.length > 0) && (
+          <small>
+            {block.responsibles.length > 0
+              ? `${block.responsibles.length} responsable(s)`
+              : ""}
+            {block.responsibles.length > 0 && block.resourceIds.length > 0
+              ? " · "
+              : ""}
+            {block.resourceIds.length > 0
+              ? `${block.resourceIds.length} recurso(s)`
+              : ""}
+          </small>
+        )}
       </button>
       <label className="duration-field">
         <span className="visually-hidden">

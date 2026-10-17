@@ -15,8 +15,8 @@ export default function ErrorPage({
     <section className="panel empty">
       <h1>No pudimos cargar esta página</h1>
       <p className="muted">
-        Intentá nuevamente. Si el problema continúa, verificá la conexión y las
-        migraciones de Supabase.
+        Revisá tu conexión y volvé a intentar. Si el problema continúa, avisale
+        a la persona que administra Crono Unidos.
       </p>
       <Button onClick={reset}>Volver a intentar</Button>
     </section>

@@ -16,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "./ui/button";
+import { LinkProgress } from "./link-progress";
 const navigation = [
   { href: "/inicio", label: "Inicio", icon: Home },
   { href: "/cronograma", label: "Cronograma", icon: LayoutList },
@@ -66,6 +67,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <Link key={href} href={href} aria-current={active(href)}>
               <Icon size={20} />
               {label}
+              <LinkProgress />
             </Link>
           ))}
         </nav>
@@ -114,6 +116,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <Link key={href} href={href} aria-current={active(href)}>
             <Icon size={22} />
             {label}
+            <LinkProgress />
           </Link>
         ))}
       </nav>

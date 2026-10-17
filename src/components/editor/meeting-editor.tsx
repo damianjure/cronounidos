@@ -15,7 +15,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { ArrowUp, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   saveMeeting,
@@ -40,6 +40,10 @@ import {
 import { optimisticSave } from "@/lib/editor/transaction";
 import { CustomFields } from "./custom-fields";
 import { SortableBlock } from "./sortable-block";
+import { BlockPicker } from "./block-picker";
+import { CatalogChoices as Choices } from "./catalog-choices";
+import { useUnsavedChanges } from "./use-unsaved-changes";
+import { blockPresentation, searchText } from "@/lib/editor/presentation";
 const copyLabels: Record<keyof CopyOptions, string> = {
   structure: "Estructura y duraciones",
   responsibles: "Responsables",
@@ -48,68 +52,6 @@ const copyLabels: Record<keyof CopyOptions, string> = {
   notes: "Notas y mensaje",
   resources: "Recursos",
 };
-function Choices({
-  label,
-  items,
-  value,
-  onChange,
-  disabled,
-}: {
-  label: string;
-  items: CatalogItem[];
-  value: string[];
-  onChange: (s: string[]) => void;
-  disabled: boolean;
-}) {
-  return (
-    <details className="editor-choices">
-      <summary>
-        {label} ({value.length})
-      </summary>
-      <fieldset disabled={disabled}>
-        {items.map((item) => (
-          <label key={item.id}>
-            <input
-              type="checkbox"
-              checked={value.includes(item.id)}
-              onChange={(e) =>
-                onChange(
-                  e.target.checked
-                    ? [...value, item.id]
-                    : value.filter((id) => id !== item.id),
-                )
-              }
-            />
-            {item.name}
-          </label>
-        ))}
-        {!items.length && (
-          <p className="muted">No hay elementos de catálogo disponibles.</p>
-        )}
-      </fieldset>
-      {value.map((id, index) => (
-        <div className="selection-row" key={`${id}-${index}`}>
-          <span>
-            {items.find((i) => i.id === id)?.name || "Elemento no disponible"}
-          </span>
-          <button
-            type="button"
-            className="icon-button"
-            disabled={disabled || index === 0}
-            aria-label={`Mover ${items.find((i) => i.id === id)?.name || "elemento"} antes`}
-            onClick={() => {
-              const next = [...value];
-              [next[index - 1], next[index]] = [next[index], next[index - 1]];
-              onChange(next);
-            }}
-          >
-            <ArrowUp size={16} />
-          </button>
-        </div>
-      ))}
-    </details>
-  );
-}
 export function MeetingEditor({
   initial,
   catalog,
@@ -133,12 +75,18 @@ export function MeetingEditor({
   const [failDemo, setFailDemo] = useState(false);
   const [copyOptions, setCopyOptions] = useState(defaultCopyOptions);
   const [newType, setNewType] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [peopleQuery, setPeopleQuery] = useState("");
+  const detailPanel = useRef<HTMLElement>(null);
   const [person, setPerson] = useState("");
   const [team, setTeam] = useState("");
   const [role, setRole] = useState("");
   const durationBefore = useRef<EditorSnapshot | null>(null);
   const router = useRouter();
-  const [keyboardDrag, setKeyboardDrag] = useState<{ key: string; target: number } | null>(null);
+  const [keyboardDrag, setKeyboardDrag] = useState<{
+    key: string;
+    target: number;
+  } | null>(null);
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 7 } }),
     useSensor(TouchSensor, {
@@ -147,9 +95,52 @@ export function MeetingEditor({
   );
   const times = plannedTimes(snapshot.metadata, snapshot.blocks);
   const active = snapshot.blocks.find((b) => b.clientKey === selected);
-  const currentType = catalog.blockTypes.find((t) => t.id === active?.blockTypeId);
+  const currentType = catalog.blockTypes.find(
+    (t) => t.id === active?.blockTypeId,
+  );
   const [lastSaved, setLastSaved] = useState(initial);
   const dirty = JSON.stringify(snapshot) !== JSON.stringify(lastSaved);
+  useUnsavedChanges(dirty || busy);
+  const totalMinutes =
+    snapshot.blocks.reduce((total, block) => total + block.durationSeconds, 0) /
+    60;
+  const end = times.at(-1)?.end;
+  const endLabel = end
+    ? new Intl.DateTimeFormat("es-AR", {
+        timeZone: snapshot.metadata.timezone,
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      }).format(new Date(end))
+    : "—";
+  const endDate = end
+    ? new Intl.DateTimeFormat("en-CA", {
+        timeZone: snapshot.metadata.timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date(end))
+    : "";
+  function selectBlock(key: string) {
+    setSelected(key);
+    setPerson("");
+    setTeam("");
+    setRole("");
+    setPeopleQuery("");
+  }
+  function focusSection(section: string) {
+    const target = detailPanel.current?.querySelector<HTMLElement>(
+      `[data-detail-section="${section}"]`,
+    );
+    if (!target) return;
+    if (target instanceof HTMLDetailsElement) target.open = true;
+    target.scrollIntoView({ block: "nearest", behavior: "instant" });
+    const focusable =
+      target instanceof HTMLDetailsElement
+        ? target.querySelector("summary")
+        : target.querySelector("input");
+    (focusable as HTMLElement | null)?.focus();
+  }
   const edit = (patch: Partial<EditorBlock>) => {
     setSnapshot((s) => ({
       ...s,
@@ -241,7 +232,9 @@ export function MeetingEditor({
     if (pending.current) {
       queuedMoves.current.push({ key, target });
       setSnapshot((s) => ({ ...s, blocks: reorder(s.blocks, key, target) }));
-      setMessage("Movimiento en cola: se guarda al terminar el guardado actual.");
+      setMessage(
+        "Movimiento en cola: se guarda al terminar el guardado actual.",
+      );
       return;
     }
     void persist({
@@ -255,7 +248,9 @@ export function MeetingEditor({
   }
   function keyboardToggle(key: string) {
     if (keyboardDrag?.key === key) {
-      const before = snapshot.blocks.findIndex((block) => block.clientKey === key);
+      const before = snapshot.blocks.findIndex(
+        (block) => block.clientKey === key,
+      );
       const target = keyboardDrag.target;
       setKeyboardDrag(null);
       if (before !== target) requestMove(key, target);
@@ -265,9 +260,17 @@ export function MeetingEditor({
     if (index >= 0) setKeyboardDrag({ key, target: index });
   }
   function keyboardMove(key: string, offset: number) {
-    setKeyboardDrag((current) => current?.key === key ? {
-      key, target: Math.max(0, Math.min(snapshot.blocks.length - 1, current.target + offset)),
-    } : current);
+    setKeyboardDrag((current) =>
+      current?.key === key
+        ? {
+            key,
+            target: Math.max(
+              0,
+              Math.min(snapshot.blocks.length - 1, current.target + offset),
+            ),
+          }
+        : current,
+    );
   }
   function dragEnd(event: DragEndEvent) {
     setDragOverId(null);
@@ -280,7 +283,7 @@ export function MeetingEditor({
   }
   return (
     <>
-      <div className="page-heading">
+      <div className="page-heading editor-heading">
         <div>
           <h1>{snapshot.metadata.title}</h1>
           <p className="muted">
@@ -291,17 +294,6 @@ export function MeetingEditor({
           </p>
         </div>
         <div className="editor-toolbar">
-          {!demo && (
-            <form action={saveTemplate} className="editor-toolbar">
-              <input type="hidden" name="meetingId" value={snapshot.meetingId} />
-              <input type="hidden" name="version" value={snapshot.version} />
-              <label className="field">
-                Nombre de la plantilla
-                <input name="name" defaultValue={snapshot.metadata.title} minLength={2} maxLength={120} required />
-              </label>
-              <Button disabled={busy || dirty} variant="outline">Guardar como plantilla</Button>
-            </form>
-          )}
           <Button
             disabled={busy}
             variant="outline"
@@ -324,8 +316,113 @@ export function MeetingEditor({
           >
             {demo ? "Simular publicación" : "Publicar cambios"}
           </Button>
+          <details className="editor-secondary">
+            <summary>Más acciones</summary>
+            <div className="secondary-content">
+              <a
+                className="button button-ghost"
+                href="#duplicar-reunion"
+                onClick={() => {
+                  const target = document.getElementById("duplicar-reunion");
+                  if (target instanceof HTMLDetailsElement) target.open = true;
+                }}
+              >
+                Opciones para duplicar
+              </a>
+              {!demo && (
+                <form action={saveTemplate}>
+                  <input
+                    type="hidden"
+                    name="meetingId"
+                    value={snapshot.meetingId}
+                  />
+                  <input
+                    type="hidden"
+                    name="version"
+                    value={snapshot.version}
+                  />
+                  <label className="field">
+                    Nombre de la plantilla
+                    <input
+                      name="name"
+                      defaultValue={snapshot.metadata.title}
+                      minLength={2}
+                      maxLength={120}
+                      required
+                    />
+                  </label>
+                  <Button disabled={busy || dirty} variant="outline">
+                    Guardar como plantilla
+                  </Button>
+                </form>
+              )}
+            </div>
+          </details>
         </div>
       </div>
+      <div className="editor-summary" aria-label="Resumen del cronograma">
+        <span>
+          <small>Fecha</small>
+          <strong>
+            {snapshot.metadata.date.split("-").reverse().join("/")}
+          </strong>
+        </span>
+        <span>
+          <small>Inicio</small>
+          <strong>{snapshot.metadata.startLocalTime}</strong>
+        </span>
+        <span>
+          <small>Duración</small>
+          <strong>
+            {new Intl.NumberFormat("es-AR", {
+              maximumFractionDigits: 2,
+            }).format(totalMinutes)}{" "}
+            min
+          </strong>
+        </span>
+        <span>
+          <small>Fin planificado</small>
+          <strong>
+            {endLabel}
+            {endDate && endDate !== snapshot.metadata.date
+              ? ` (${endDate})`
+              : ""}
+          </strong>
+        </span>
+        <span>
+          <small>Estado de edición</small>
+          <strong>
+            {busy
+              ? "Guardando…"
+              : dirty
+                ? "Cambios sin guardar"
+                : "Sin cambios pendientes"}
+          </strong>
+        </span>
+      </div>
+      {pickerOpen && (
+        <BlockPicker
+          types={catalog.blockTypes}
+          onClose={() => setPickerOpen(false)}
+          onCreate={(typeId, name, seconds) => {
+            const block = {
+              ...emptyBlock(
+                name,
+                catalog.blockTypes.find((type) => type.id === typeId),
+              ),
+              name,
+              durationSeconds: seconds,
+            };
+            setSnapshot((current) => ({
+              ...current,
+              blocks: [...current.blocks, block],
+            }));
+            selectBlock(block.clientKey);
+            setPickerOpen(false);
+            setMessage("Bloque agregado al borrador. Guardá para conservarlo.");
+          }}
+        />
+      )}
       {demo && (
         <div className="notice">
           <strong>Demostración con datos ficticios</strong>
@@ -442,24 +539,50 @@ export function MeetingEditor({
         <section className="panel timeline-panel">
           <div className="section-title">
             <h2>Actividades</h2>
-            <span className="pill">
-              {Math.round(
-                snapshot.blocks.reduce(
-                  (total, b) => total + b.durationSeconds,
-                  0,
-                ) / 60,
-              )}{" "}
-              min
-            </span>
+            <Button
+              type="button"
+              disabled={busy}
+              onClick={() => setPickerOpen(true)}
+              className="desktop-editor-control"
+            >
+              <Plus size={18} />
+              Agregar bloque
+            </Button>
           </div>
           <p className="muted editor-hint">
             Arrastrá desde el handle o usá las flechas. También podés reordenar
             con el teclado.
           </p>
+          <p className="visually-hidden" aria-live="polite" aria-atomic="true">
+            {keyboardDrag
+              ? `Moviendo ${snapshot.blocks.find((block) => block.clientKey === keyboardDrag.key)?.name}. Destino: posición ${keyboardDrag.target + 1} de ${snapshot.blocks.length}. Espacio confirma; Escape cancela.`
+              : ""}
+          </p>
           <DndContext
             sensors={sensors}
+            accessibility={{
+              screenReaderInstructions: {
+                draggable:
+                  "Para mover una actividad, presioná Espacio, usá las flechas y confirmá con Espacio. Escape cancela.",
+              },
+              announcements: {
+                onDragStart: ({ active }) =>
+                  `Moviendo ${snapshot.blocks.find((block) => block.clientKey === active.id)?.name ?? "actividad"}.`,
+                onDragOver: ({ over }) =>
+                  over
+                    ? `Destino: posición ${snapshot.blocks.findIndex((block) => block.clientKey === over.id) + 1} de ${snapshot.blocks.length}.`
+                    : "Fuera de la lista.",
+                onDragEnd: ({ active, over }) =>
+                  over
+                    ? `${snapshot.blocks.find((block) => block.clientKey === active.id)?.name ?? "Actividad"} soltada en posición ${snapshot.blocks.findIndex((block) => block.clientKey === over.id) + 1}.`
+                    : "Movimiento cancelado.",
+                onDragCancel: () => "Movimiento cancelado.",
+              },
+            }}
             collisionDetection={closestCenter}
-            onDragOver={(event) => setDragOverId(event.over ? String(event.over.id) : null)}
+            onDragOver={(event) =>
+              setDragOverId(event.over ? String(event.over.id) : null)
+            }
             onDragCancel={() => setDragOverId(null)}
             onDragEnd={dragEnd}
           >
@@ -467,22 +590,40 @@ export function MeetingEditor({
               items={snapshot.blocks.map((b) => b.clientKey)}
               strategy={verticalListSortingStrategy}
             >
-              <ol className="editor-timeline" data-drag-over={keyboardDrag ? snapshot.blocks[keyboardDrag.target]?.clientKey : dragOverId ?? undefined}>
+              <ol
+                className="editor-timeline"
+                data-drag-over={
+                  keyboardDrag
+                    ? snapshot.blocks[keyboardDrag.target]?.clientKey
+                    : (dragOverId ?? undefined)
+                }
+              >
                 {snapshot.blocks.map((b, index) => (
                   <SortableBlock
                     key={b.clientKey}
                     block={b}
+                    typeName={
+                      catalog.blockTypes.find(
+                        (type) => type.id === b.blockTypeId,
+                      )?.name
+                    }
                     time={times[index]}
                     index={index}
                     count={snapshot.blocks.length}
                     selected={selected === b.clientKey}
                     busy={busy}
                     keyboardActive={keyboardDrag?.key === b.clientKey}
-                    keyboardTarget={keyboardDrag?.key === b.clientKey && keyboardDrag.target === index}
+                    keyboardTarget={
+                      keyboardDrag
+                        ? keyboardDrag.target === index
+                        : dragOverId === b.clientKey
+                    }
                     onKeyboardToggle={() => keyboardToggle(b.clientKey)}
-                    onKeyboardMove={(offset) => keyboardMove(b.clientKey, offset)}
+                    onKeyboardMove={(offset) =>
+                      keyboardMove(b.clientKey, offset)
+                    }
                     onKeyboardCancel={() => setKeyboardDrag(null)}
-                    onSelect={() => setSelected(b.clientKey)}
+                    onSelect={() => selectBlock(b.clientKey)}
                     onMove={(offset) => void move(b.clientKey, offset)}
                     onDuration={(seconds) =>
                       setSnapshot((s) => ({
@@ -517,7 +658,17 @@ export function MeetingEditor({
               Agregá la primera actividad del encuentro.
             </p>
           )}
-          <div className="editor-add">
+          <Button
+            type="button"
+            disabled={busy}
+            variant="outline"
+            className="desktop-editor-control editor-add-block"
+            onClick={() => setPickerOpen(true)}
+          >
+            <Plus size={18} />
+            Agregar bloque
+          </Button>
+          <div className="editor-add mobile-editor-add">
             <label className="field">
               Tipo de actividad
               <select
@@ -550,7 +701,7 @@ export function MeetingEditor({
             </Button>
           </div>
         </section>
-        <section className="panel block-detail">
+        <section className="panel block-detail" ref={detailPanel}>
           {active ? (
             <>
               <div className="section-title">
@@ -573,7 +724,40 @@ export function MeetingEditor({
                   <Trash2 size={18} />
                 </button>
               </div>
-              <fieldset className="editor-fields" disabled={busy}>
+              <p className="muted detail-context">
+                {
+                  blockPresentation(currentType?.name ?? active.name)
+                    .description
+                }
+              </p>
+              <nav
+                className="detail-section-nav desktop-editor-control"
+                aria-label="Secciones del bloque"
+              >
+                {[
+                  ["activity", "actividad"],
+                  ["team", "equipo"],
+                  ["songs", "canciones"],
+                  ["messages", "mensaje"],
+                  ["announcements", "anuncios"],
+                  ["resources", "recursos"],
+                  ["advanced", "avanzado"],
+                ].map(([section, label]) => (
+                  <button
+                    type="button"
+                    key={section}
+                    onClick={() => focusSection(section)}
+                    aria-label={`Ir a ${label}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </nav>
+              <fieldset
+                className="editor-fields"
+                disabled={busy}
+                data-detail-section="activity"
+              >
                 <label className="field">
                   Nombre de la actividad
                   <input
@@ -616,47 +800,75 @@ export function MeetingEditor({
                   Notas privadas
                   <textarea
                     rows={4}
+                    aria-label="Notas privadas"
                     maxLength={12000}
                     value={active.notes}
                     onChange={(e) => edit({ notes: e.target.value })}
                   />
                 </label>
               </fieldset>
-              <CustomFields
-                schema={active.fieldSchema}
-                values={active.customFields}
-                disabled={busy}
-                onSchema={(fieldSchema) => edit({ fieldSchema })}
-                onValues={(customFields) => edit({ customFields })}
-              />
-              {currentType &&
-                JSON.stringify(currentType.fieldSchema) !==
-                  JSON.stringify(active.fieldSchema) && (
-                  <div className="notice">
-                    <p>Hay una versión nueva de este tipo. Esta instancia conserva su definición hasta que decidas actualizarla.</p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() => {
-                        if (!window.confirm("¿Aplicar la definición actual solo a esta actividad? Los valores incompatibles se quitarán del borrador. La agenda publicada no cambia hasta publicar.")) return;
-                        const compatible = Object.fromEntries(
-                          Object.entries(active.customFields).filter(([key, value]) => {
-                            const field = currentType.fieldSchema.find((item) => item.key === key);
-                            if (!field) return false;
-                            let invalid = false;
-                            validateFields([field], { [key]: value }, () => { invalid = true; });
-                            return !invalid;
-                          }),
-                        );
-                        edit({ fieldSchema: currentType.fieldSchema, customFields: compatible });
-                      }}
-                    >
-                      Aplicar definición a esta actividad
-                    </Button>
-                  </div>
-                )}
-              <details className="editor-choices">
+              <details
+                className="editor-choices advanced-fields"
+                data-detail-section="advanced"
+              >
+                <summary>Opciones avanzadas</summary>
+                <CustomFields
+                  schema={active.fieldSchema}
+                  values={active.customFields}
+                  disabled={busy}
+                  onSchema={(fieldSchema) => edit({ fieldSchema })}
+                  onValues={(customFields) => edit({ customFields })}
+                />
+                {currentType &&
+                  JSON.stringify(currentType.fieldSchema) !==
+                    JSON.stringify(active.fieldSchema) && (
+                    <div className="notice">
+                      <p>
+                        Hay una versión nueva de este tipo. Esta instancia
+                        conserva su definición hasta que decidas actualizarla.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => {
+                          if (
+                            !window.confirm(
+                              "¿Aplicar la definición actual solo a esta actividad? Los valores incompatibles se quitarán del borrador. La agenda publicada no cambia hasta publicar.",
+                            )
+                          )
+                            return;
+                          const compatible = Object.fromEntries(
+                            Object.entries(active.customFields).filter(
+                              ([key, value]) => {
+                                const field = currentType.fieldSchema.find(
+                                  (item) => item.key === key,
+                                );
+                                if (!field) return false;
+                                let invalid = false;
+                                validateFields(
+                                  [field],
+                                  { [key]: value },
+                                  () => {
+                                    invalid = true;
+                                  },
+                                );
+                                return !invalid;
+                              },
+                            ),
+                          );
+                          edit({
+                            fieldSchema: currentType.fieldSchema,
+                            customFields: compatible,
+                          });
+                        }}
+                      >
+                        Aplicar definición a esta actividad
+                      </Button>
+                    </div>
+                  )}
+              </details>
+              <details className="editor-choices" data-detail-section="team">
                 <summary>Responsables ({active.responsibles.length})</summary>
                 {active.responsibles.map((r, index) => (
                   <div
@@ -694,21 +906,6 @@ export function MeetingEditor({
                 ))}
                 <div className="field-grid">
                   <label className="field">
-                    Persona
-                    <select
-                      value={person}
-                      onChange={(e) => setPerson(e.target.value)}
-                      disabled={busy}
-                    >
-                      <option value="">Seleccionar</option>
-                      {catalog.people.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="field">
                     Equipo del responsable
                     <select
                       value={team}
@@ -743,6 +940,36 @@ export function MeetingEditor({
                         ))}
                     </select>
                   </label>
+                  <label className="field">
+                    Buscar persona
+                    <input
+                      type="search"
+                      value={peopleQuery}
+                      onChange={(event) => setPeopleQuery(event.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    Persona
+                    <select
+                      value={person}
+                      onChange={(e) => setPerson(e.target.value)}
+                      disabled={busy}
+                    >
+                      <option value="">Seleccionar</option>
+                      {catalog.people
+                        .filter(
+                          (p) =>
+                            searchText(p.name).includes(
+                              searchText(peopleQuery),
+                            ) || p.id === person,
+                        )
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
                 </div>
                 <Button
                   variant="outline"
@@ -766,28 +993,48 @@ export function MeetingEditor({
                 </Button>
               </details>
               <Choices
+                key={`${active.clientKey}-songs`}
                 label="Canciones en orden"
+                section="songs"
+                suggested={
+                  blockPresentation(currentType?.name ?? active.name).kind ===
+                  "music"
+                }
                 items={catalog.songs}
                 value={active.songIds}
                 disabled={busy}
                 onChange={(songIds) => edit({ songIds })}
               />
               <Choices
+                key={`${active.clientKey}-announcements`}
                 label="Anuncios"
+                section="announcements"
+                suggested={
+                  blockPresentation(currentType?.name ?? active.name).kind ===
+                  "announcement"
+                }
                 items={catalog.announcements}
                 value={active.announcementIds}
                 disabled={busy}
                 onChange={(announcementIds) => edit({ announcementIds })}
               />
               <Choices
+                key={`${active.clientKey}-messages`}
                 label="Mensaje"
+                section="messages"
+                suggested={
+                  blockPresentation(currentType?.name ?? active.name).kind ===
+                  "message"
+                }
                 items={catalog.messages}
                 value={active.messageIds}
                 disabled={busy}
                 onChange={(messageIds) => edit({ messageIds })}
               />
               <Choices
+                key={`${active.clientKey}-resources`}
                 label="Recursos y enlaces"
+                section="resources"
                 items={catalog.resources}
                 value={active.resourceIds}
                 disabled={busy}
@@ -795,11 +1042,12 @@ export function MeetingEditor({
               />
               {active.resourceIds.map((id) => {
                 const resource = catalog.resources.find((r) => r.id === id);
-                const href = resource && resource.storagePath
-                  ? `/recursos/${resource.id}`
-                  : resource?.url && safeUrl.safeParse(resource.url).success
-                    ? resource.url
-                    : null;
+                const href =
+                  resource && resource.storagePath
+                    ? `/recursos/${resource.id}`
+                    : resource?.url && safeUrl.safeParse(resource.url).success
+                      ? resource.url
+                      : null;
                 return href ? (
                   <a
                     className="button button-ghost resource-link"
@@ -986,7 +1234,7 @@ export function MeetingEditor({
           )}
         </section>
       </div>
-      <details className="panel duplicate-panel">
+      <details className="panel duplicate-panel" id="duplicar-reunion">
         <summary>Duplicar reunión</summary>
         <p className="muted">
           Elegí qué copiar. Todas las confirmaciones de la copia vuelven a
