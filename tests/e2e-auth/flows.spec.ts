@@ -663,9 +663,14 @@ test('en vivo: dos dispositivos sincronizan, recuperan desconexión y cierran ex
    if (route.request().method() !== 'POST' || intercepted) return route.continue();
    intercepted = true;
    const response = await route.fetch();
+   // Materialize Flight bytes before releasing: the APIResponse stream/encoding
+   // must not keep the browser response unfinished on Linux Chromium.
+   const body = await response.body();
+   const headers = Object.fromEntries(Object.entries(response.headers()).filter(([key]) =>
+    !['content-encoding', 'content-length', 'transfer-encoding'].includes(key.toLowerCase())));
    readReady();
    await heldRead;
-   await route.fulfill({ response });
+   await route.fulfill({ status: response.status(), headers, body });
   });
   await page.getByRole('button',{name:'Sincronizar ahora',exact:true}).click();
   await ready;
