@@ -139,3 +139,24 @@ Prueba de configuración con cola vacía: pg_net request **3**, HTTP **200**, co
 - Se pidió autorización explícita para agregar **solo la IP bloqueada observada**, sin rangos ni desactivar el bloqueo general. No se autorizó ninguna IP automáticamente: esa lista afecta API/SMTP de toda la cuenta Brevo, no solo a Crono Unidos. Autorizar una IP dinámica puede servir para la prueba, **no resuelve estabilidad de egress para Production**.
 
 Referencias: [bloqueo y lista compartida de Brevo](https://help.brevo.com/hc/en-us/articles/5740111683858-Authorize-and-block-IP-addresses-for-API-and-SMTP-security), [egress dinámico y allowlist en Vercel](https://vercel.com/kb/guide/how-to-allowlist-deployment-ip-address). No se cambió facturación, plan de Vercel ni seguridad global de Brevo. Antes de reintentar, resolver permiso/IP y revisar la ventana de idempotencia; no resetear masivamente trabajos fallidos ni volver a enviar aceptados.
+
+## Decisión: desactivar el bloqueo de IP de Brevo para API — 17/10/2026
+
+Decisión del propietario: **desactivar el bloqueo de IP para API en Brevo** (Seguridad → IPs autorizadas) en lugar de autorizar IPs puntuales o contratar IPs estáticas en Vercel.
+
+- Motivo: Vercel Functions no tienen IP de salida fija; autorizar la IP observada solo sirve hasta el próximo cambio de egress y no resuelve Production.
+- Alcance: el ajuste es de **toda la cuenta Brevo** (afecta a otros proyectos que usen la misma cuenta), no solo a Crono Unidos.
+- Riesgo aceptado: una API key filtrada podría usarse desde cualquier IP.
+- Mitigaciones obligatorias: `BREVO_API_KEY` solo como Secret/Sensitive en Vercel (nunca `NEXT_PUBLIC_*`, logs ni Git); key exclusiva para Crono Unidos con permisos mínimos; rotarla ante cualquier sospecha; revisar periódicamente los logs de envío de Brevo; mantener `FEEDBACK_EMAIL_ENABLED=false` hasta la prueba acordada.
+- Pendiente de ejecución (propietario): desactivar el bloqueo en Brevo. Después, reintentar una prueba real controlada en Preview. La fila `failed` del primer intento no se reencola automáticamente.
+
+## Remitente personal bloqueado en el código — 17/10/2026
+
+`mailConfig` (`src/lib/feedback/email.ts`) rechaza `hola@damianjure.com` como remitente cuando `VERCEL_ENV=production`. Decisión del propietario: mantenerlo escrito en el código (no moverlo a variable de entorno). Si cambia el remitente personal temporal de Preview, actualizar esa constante y su test.
+
+## Prueba real exitosa tras desactivar el bloqueo de IP — 17/10/2026
+
+- El propietario desactivó el bloqueo de IP para API en Brevo.
+- La única fila del outbox (`failed`, 2 intentos, `provider_rejected`) se reencoló manualmente: `status='retry'`, `first_attempt_at=null` (nueva ventana de 10 min), `next_attempt_at=now()`. Se conservaron los intentos previos, la auditoría y el remitente congelado `crono@damianjure.com`. No hubo riesgo de duplicado porque Brevo nunca había aceptado esa idempotency key.
+- `FEEDBACK_EMAIL_ENABLED=true` se configuró solo en Preview (rama `codex/sprint-2-editor`), con redeploy `dpl_37jfCp79RBCtidHrw1CoY8kRYFz5` del commit `08a1c8f`. Production no se tocó.
+- Resultado: outbox **accepted** en el intento 3, `accepted_at=2026-10-17 04:05:03 UTC`, con `provider_message_id` guardado. Esto confirma la **aceptación por Brevo**; la recepción en la bandeja la confirma el propietario.

@@ -27,3 +27,12 @@ Presets aditivos tras aprobación; ACL granular administrable desde el panel. Ad
 Base visual: azul petróleo #163c53, acento azul #165c7d, superficies claras #f1f5f7/#fff y tema oscuro. Tipografía del sistema/Avenir, alineación izquierda y densidad de escritorio; una agenda clara antes que estadísticas falsas. Tailwind 4 y primitivas Slot/CVA con tokens CSS; dnd-kit instalado sin fingir editor listo. La revisión de código siguió el checklist React (guards de Server Actions, separación client/server, caché React por request para auth, sin caché cross-user); no hubo revisión visual exitosa por el bloqueo de navegador.
 
 Next usa `proxy.ts` y `getUser` para verificación/renovación de sesión; acceso normal por RLS, sin service-role. Build webpack evita depender de binarios de Turbopack del host. Outputs alternativos son configurables solo para repetir validación sin limpiar carpetas restringidas. No se deshabilitaron tests ni RLS para conseguir resultados verdes.
+
+## Deuda técnica planificada: dividir el editor — 17/10/2026
+
+`src/components/editor/meeting-editor.tsx` supera las 1000 líneas (13+ estados). Se pospone dividirlo hasta poder verificar con CI/E2E. Plan propuesto, sin cambiar comportamiento:
+1. `EditorTimeline`: DndContext, sensores, `requestMove`/cola de movimientos, teclado.
+2. `BlockPanel`: edición del bloque activo, subactividades y campos personalizados.
+3. `BlockAssignments`: persona/equipo/rol y responsables.
+4. `EditorActions`: guardar, publicar, duplicar (opciones de copia), cancelar y modo demo.
+El estado de snapshot, `persist` y la cola quedan en un hook `useEditorSnapshot`. Requisito: `npm run check` y E2E autenticada verdes antes y después, sin modificar tests.

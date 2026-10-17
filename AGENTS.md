@@ -1,6 +1,6 @@
 # Guía obligatoria para Codex — cronounidos
 
-Leé este archivo y toda la carpeta `docs/` ANTES de empezar. El alcance del MVP está aprobado en `docs/PRD.md` y las decisiones en `docs/DECISIONS.md`. Seguí `docs/ROADMAP.md` con commits pequeños, tests y verificación.
+Leé este archivo y toda la carpeta `docs/` ANTES de empezar; el estado vigente está en `docs/STATUS.md` y debe actualizarse con cada cambio de estado. El alcance del MVP está aprobado en `docs/PRD.md` y las decisiones en `docs/DECISIONS.md`. Seguí `docs/ROADMAP.md` con commits pequeños, tests y verificación.
 
 ## Arquitectura y UX
 - Next.js App Router + TypeScript strict + Tailwind + shadcn/ui + dnd-kit + Supabase + Vercel; sin FastAPI para MVP.

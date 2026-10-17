@@ -1,6 +1,6 @@
 # Preparación de servicios y entorno
 
-> Estado vigente 16/10/2026: Sprints 0–4 cerrados funcionalmente; Sprint 5 implementa feedback in-app y worker Brevo, pero sigue abierto por activación/prueba real de correo y gates de Production. **33 migraciones** aplicadas en local y en el Supabase independiente `ivmhgizuofxdvvvzdxnl`. Estado del canal y credenciales en `EMAIL.md`; las entradas posteriores son checkpoints históricos, no el estado vigente.
+> Estado vigente consolidado: ver `STATUS.md`. Snapshot 16/10/2026: Sprints 0–4 cerrados funcionalmente; Sprint 5 implementa feedback in-app y worker Brevo, pero sigue abierto por activación/prueba real de correo y gates de Production. **33 migraciones** aplicadas en local y en el Supabase independiente `ivmhgizuofxdvvvzdxnl`. Estado del canal y credenciales en `EMAIL.md`; las entradas posteriores son checkpoints históricos, no el estado vigente.
 
 ## Estado actual
 
@@ -190,3 +190,13 @@ Consulta DNS de solo lectura: los servidores autoritativos de `damianjure.com` s
 Al conectar el dominio aprobado, obtener primero de Vercel el destino DNS exacto del proyecto y cargar solo el registro del subdominio en **Cloudflare**. No inventar un CNAME universal, trasladar nameservers ni modificar MX, DKIM o DMARC existentes. Los MX actuales apuntan a Cloudflare Email Routing; eso no demuestra que el alias `crono@damianjure.com` exista. Confirmar su entrega por separado.
 
 El propietario confirmó la creación del bypass de automatización y Vercel mostró una segunda credencial recién agregada, sin revelar su valor ni modificar la anterior. La consulta de metadata en Supabase aún no encontró `crono_unidos_feedback_vercel_bypass`: se dejó el formulario Vault del proyecto correcto con nombre/descripcion preparados, para que el propietario pegue el valor directamente. Callback ausente y canal desactivado. No confundir bypass creado en Vercel con credencial ya disponible en Vault.
+
+## Verificación obligatoria del scheduler — 17/10/2026
+
+Las migraciones de feedback solo emiten `NOTICE` si faltan `pg_cron`/`pg_net`, para poder correr en PGlite. Un entorno real podría quedar sin scheduler sin errores. Después de cada `db push` a un entorno real (Preview remoto y **antes de Production**):
+
+```sh
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/check-scheduler.sql
+```
+
+(o pegar `scripts/check-scheduler.sql` en el SQL Editor). Falla si falta `pg_cron`, `pg_net` o algún job activo `crono-unidos-feedback-dispatch` / `crono-unidos-feedback-email`, y lista las últimas ejecuciones para confirmar `succeeded`. Es solo lectura. No reemplaza la configuración de Vault del worker (ver `EMAIL.md`).

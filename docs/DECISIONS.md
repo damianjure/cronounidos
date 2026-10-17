@@ -60,3 +60,26 @@ Otros requisitos aprobados:
 Se conserva el backend Next.js/Supabase aprobado: un worker POST de servidor usa una capacidad de máquina acotada para reclamar/finalizar filas privadas; Supabase Cron + pg_net lo despierta con un secreto independiente de Vault. No se agrega FastAPI, Edge Function ni Vercel Cron de minuto sujeto al plan. Brevo recibe texto genérico, sin contenido de feedback. Canal deshabilitado por defecto y separado del SMTP de Auth.
 
 La idempotencia externa tiene TTL, no duración infinita: payload/key congelados, leases y reintentos auditados dentro de diez minutos; luego revisión sin reenvío automático. El cambio Preview→Production reveló un caso importante: congelar remitente/origen por sí solo permitiría enviar un retry antiguo con el remitente temporal. Se bloquea ese payload ante configuración distinta y queda `configuration_changed` para revisión, sin mutarlo ni enviarlo desde Production. Ver `EMAIL.md` para configuración y límites verificados.
+
+## Correo: bloqueo de IP de Brevo — 17/10/2026
+- Se desactiva el bloqueo de IP para API de Brevo (ajuste de cuenta) porque Vercel no tiene egress fijo. Se descartan IPs puntuales (inestables) e IPs estáticas pagas de Vercel. Riesgo y mitigaciones en `EMAIL.md`.
+
+## Seguridad web: Content-Security-Policy — 17/10/2026
+- Se agrega CSP en `next.config.ts` como **`Content-Security-Policy-Report-Only`**: no bloquea nada; las violaciones aparecen en la consola del navegador. Orígenes: `'self'` y el origen de `NEXT_PUBLIC_SUPABASE_URL` (HTTPS y WSS para Realtime). `frame-ancestors 'none'`, `object-src 'none'`.
+- `'unsafe-inline'` en scripts/estilos es necesario hoy para Next.js sin nonces; endurecer con nonces es mejora posterior.
+- Gate de Production: recorrer Preview (login, editor, subida, en vivo, feedback, PWA) sin violaciones y cambiar el header a `Content-Security-Policy`.
+
+## Altas de usuarios: limpieza ante fallo — 17/10/2026
+- Si `register_invited_member` falla después de crear/invitar la cuenta en Auth, `provisionUser` elimina esa cuenta con el cliente privilegiado de servidor (`error=membresia`, se puede reintentar con el mismo correo). Si el borrado también falla, `error=membresia-huerfana` pide eliminarla desde Supabase Auth. Una invitación ya enviada queda con enlace inválido.
+
+## Validación de acciones de administración — 17/10/2026
+- `approveMember`, `linkPerson`, `suspendMember`, `grantPermission` y `revokePermission` validan con zod (`src/lib/auth-validation.ts`): UUIDs, rol (`admin/planner/leader/member`) y permiso (enum `permission_action`) antes de consultar la base; entrada inválida → `error=datos`. La autorización real sigue en RPC/RLS. Si se agrega un valor al enum SQL, actualizar `permissionActions`. Tests: `tests/admin-input.test.ts`.
+
+## Editor: movimientos durante un guardado — 17/10/2026
+- Antes, un arrastre/teclado/botón de mover mientras había un guardado en curso se ignoraba en silencio. Ahora se **encola**: se muestra de inmediato (optimista) con el aviso "Movimiento en cola" y, al terminar el guardado, los movimientos encolados se aplican en orden sobre el snapshot persistido (versión nueva, nunca la vieja) y se guardan en una sola operación. Se identifican por `clientKey`, que es estable entre guardados.
+- Si el guardado en curso falla, el rollback también descarta los movimientos encolados y se informa. Solo los movimientos se encolan; guardar/publicar manual mientras hay un guardado en curso sigue sin duplicarse.
+
+## Infraestructura y resiliencia tras pruebas de estrés — 17/10/2026
+- **Región de funciones:** `vercel.json` fija `"regions": ["gru1"]` (São Paulo), igual que Supabase. Antes las funciones corrían en `iad1` (Washington) y cada página cruzaba varias veces entre continentes. Se aplica en el próximo deploy.
+- **Modo en vivo, lecturas directas a Supabase:** la consola lee `get_live_snapshot` desde el navegador (RPC con RLS) en vez de la server action `readLive`, para no concentrar el tráfico de muchos dispositivos detrás de una IP compartida en funciones de Vercel (riesgo de mitigación automática). Las operaciones (`operateLive`) siguen siendo server actions con requestId y versión. El polling es de 10 s sin Realtime y de 45 s con Realtime sano; el refetch disparado por Realtime tiene un jitter de 0–2,5 s. Un error de transporte de supabase-js (sin `code`) se trata como corte de red: bloquea los controles y conserva la última lectura. La E2E de respuesta tardía ahora intercepta `**/rest/v1/rpc/get_live_snapshot`.
+- **Doble envío:** los formularios con server actions usan `SubmitButton` (`useFormStatus`). Mientras se envía, todos sus botones quedan deshabilitados y el que se tocó muestra "Guardando…", para evitar errores de "conflicto" por doble toque.
