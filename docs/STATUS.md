@@ -50,6 +50,10 @@ Ver `REVIEW-2026-10-17.md`. La concurrencia y los cortes pasaron sin pérdidas n
 2. Completar los gates abiertos (seguridad, QA remota, PWA física, alias de respuestas y Production) y operar **una reunión real** con 2–3 líderes antes de sumar funcionalidades.
 3. Deuda técnica: dividir `meeting-editor.tsx` (plan en `IMPLEMENTATION-NOTES.md`).
 
+### Referencia UX desktop — 17/10/2026
+
+Se revisó Tecnoiglesia One en Brave con sesión existente: pestañas, selector de bloques, formularios de predicación/canción, biblioteca, alta de rol por área, recursos/notas, datos del servicio y selector vacío de plantillas. Formularios cancelados sin guardar; sin escrituras remotas. [Propuesta y límites](REFERENCIA-DESKTOP-TECNOIGLESIA.md): adoptar carga guiada por tipo, toolbar compacta y detalle contextual sobre el modelo actual. **Análisis, no rediseño implementado ni ampliación del PRD.** La reunión de referencia está vacía: falta una poblada para evaluar filas/reordenamiento; se solicitó al propietario. PWA física y gates de Production permanecen pendientes.
+
 ## Segunda revisión integral — 17/10/2026
 
 [Informe y reproducciones](REVIEW-2026-10-17-CODEX.md). Pruebas existentes: 219/219, SQL/RLS 95/95 (incluidas en las 219), Chrome base 30/30 y autenticado 18/18. Sondas CSP + subida local 2/2; cola del editor falla 2/2 y compensación administrativa falla 1/1 al exigir el comportamiento seguro/documentado. **No está todo aprobado por el solo hecho de que CI esté verde.** Remoto: 33 migraciones, RLS en todas las tablas públicas, dos jobs activos y una fila de correo accepted; la recepción se comprobó después por Gmail (ver actualización). En ese checkpoint del review no se cambiaron funciones ni servicios.
