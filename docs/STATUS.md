@@ -56,6 +56,8 @@ Se revisó Tecnoiglesia One en Brave con sesión existente: pestañas, selector 
 
 ## Segunda revisión integral — 17/10/2026
 
+**Actualización de referencia UX:** el propietario adjuntó una grabación de 24,15 s; se observaron el bloque atenuado siguiendo el puntero, desplazamiento anticipado de filas y asentamiento al soltar. La referencia visual del drag ya está revisada sin depender del control de Brave. No verifica persistencia/red/teclado/táctil ni implica cambios de código o cierre de gates de Production; detalle en `REFERENCIA-DESKTOP-TECNOIGLESIA.md`.
+
 [Informe y reproducciones](REVIEW-2026-10-17-CODEX.md). Pruebas existentes: 219/219, SQL/RLS 95/95 (incluidas en las 219), Chrome base 30/30 y autenticado 18/18. Sondas CSP + subida local 2/2; cola del editor falla 2/2 y compensación administrativa falla 1/1 al exigir el comportamiento seguro/documentado. **No está todo aprobado por el solo hecho de que CI esté verde.** Remoto: 33 migraciones, RLS en todas las tablas públicas, dos jobs activos y una fila de correo accepted; la recepción se comprobó después por Gmail (ver actualización). En ese checkpoint del review no se cambiaron funciones ni servicios.
 
 ### Reparaciones verificadas en local — 17/10/2026

@@ -190,3 +190,18 @@ El propietario confirmó que Brave estaba visible. Una lectura posterior mostró
 Se abrió por accesibilidad el lápiz de bienvenida: **Editar Bloque** muestra título, duración 5 min, nota existente y Cancelar/Guardar. No se editaron campos ni se pulsó Guardar. Los intentos de Cancelar/cerrar no mostraron cambio verificable; el control nativo de scroll sigue devolviendo `noWindowsAvailable`. Puede quedar abierto ese formulario sin cambios: el propietario puede cerrarlo con Cancelar. No se confirma expansión de notas, éxito de guardado ni prueba de error.
 
 **Conclusión de la revisión disponible:** tomar handle separado, filas resumidas, icono por tipo, detalles opcionales y edición contextual; mantener las horas por fila, controles accesibles, anuncios en español, cola/rollback y modelo de publicación de Crono Unidos. Se completó el análisis de lo observable, pero la validación interactiva de drag/carga/guardado continúa explícitamente limitada por la herramienta. No se debe reintentar indefinidamente ni atribuir este bloqueo a Tecnoiglesia.
+
+### Animación observada en la grabación del propietario
+
+El propietario adjuntó un MOV de **24,15 segundos**. Se inspeccionaron fotogramas locales del recorrido completo y secuencias más densas del timeline entre 8–16 y 16–24 segundos. No se subió el video a servicios externos, no se copió al repositorio ni se controló la aplicación para esta observación. Esto supera la limitación anterior para **observar la animación grabada**, no para probar por cuenta propia la persistencia del sitio.
+
+Comportamiento visible:
+- El movimiento se inicia desde el handle izquierdo. El bloque activo acompaña al puntero y aparece atenuado/semitransparente durante el arrastre.
+- Los otros bloques se desplazan verticalmente durante el movimiento para anticipar el nuevo orden, antes de soltar; no esperan únicamente al resultado final.
+- Se conserva espacio en el listado durante la reorganización y, al soltar, las tarjetas se acomodan en sus posiciones finales.
+- En la primera secuencia se observa el mensaje de 40 min pasar desde la última posición hasta la primera, atravesando posiciones intermedias. En la segunda, bienvenida pasa de tercera a segunda. Las duraciones visibles y el resumen 46/90 min con 44 restantes se mantienen.
+- No se ve una recarga completa de la página al reordenar. Esto no demuestra si el guardado es local/remoto, si hay debounce, qué petición se hace ni cómo se comporta ante error.
+
+**Referencia de interacción suficiente para diseñar nuestra adaptación:** previsualización del destino mediante desplazamiento de filas, feedback distinguible del bloque activo y asentamiento al soltar. No copiar la atenuación extrema: mantener legible el título y ofrecer reduced-motion. Conservar handle independiente, teclado/botones, anuncio en español, recálculo inmediato de horas y cola/rollback existentes. Duración/easing exactos, uso de overlay, algoritmo de colisión y librería de drag **no se deducen del video**.
+
+Quedan fuera de esta evidencia: guardado tras recargar, fallos de red, rendimiento medido, accesibilidad de teclado/lector y drag táctil. No hacen falta más intentos de acceso a Brave para describir esta animación. Esta actualización es documentación, no una implementación nueva ni cierre de un gate de Production.
