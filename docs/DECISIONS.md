@@ -92,3 +92,11 @@ Reemplaza la decisión anterior de borrar Auth si falla la membresía. `inviteUs
 ## Herramientas de estrés — propiedad y resultados
 
 El setup crea PGDATA con `mkdtemp`, rechaza `PGDATA_DIR` heredado y limpia solo el directorio de su ejecución, después de detener su servidor. Las ráfagas exigen el número exacto de éxitos y solo admiten conflictos explícitamente previstos. Despacho exige destinatarios positivos y conteos exactos de solicitudes/usuarios/notificaciones; un error de preparación o una aserción fallida produce salida no cero. Estrés SQL secuencial no sustituye E2E de la cola del editor.
+
+## Mejora del editor desktop autorizada — 17/10/2026
+
+El propietario autorizó implementar las mejoras de la referencia recopilada, posponiendo el rediseño móvil. Se conserva la identidad petróleo/azul y tipografía actual: no se clona marca, banner ni código de Tecnoiglesia. Desktop concentra cabecera compacta, resumen de horarios, cronograma y detalle lateral; alta mediante selector de tipos configurables y nombre/duración antes de agregar al borrador. Navegación por secciones abre los paneles de la misma actividad sin crear fuentes de datos duplicadas ni ocultar catálogos según heurísticas.
+
+Iconos/descripciones y apertura sugerida de contenido usan indicios del nombre solo como presentación: nunca determinan schema, permiso o entidad obligatoria. Búsquedas locales sobre catálogos autorizados, incluidas canciones por título/artista; se conservan IDs y selecciones aunque el filtro las oculte. Campos personalizados/paralelas y relaciones normalizadas siguen disponibles. No se agregan PDF, rich text, playback, duración objetivo ni columnas nuevas.
+
+Se mantienen sensores/estrategia dnd-kit, cola/versiones/rollback y publicación separada. Se mejora feedback del arrastre y anuncios en español; reduced-motion evita transición. Advertencia para recarga/cierre y enlaces que abandonan cambios pendientes. No se promete bloqueo universal de navegación programática/historial SPA. El indicador de navegación usa `useLinkStatus` dentro de enlaces: **no** un `loading.tsx` superior, porque una prueba real detectó que ese boundary convertía el 404 de una ruta restringida en 200 de streaming. Conservar guards y respuestas verificables, no relajar las pruebas por una mejora visual.

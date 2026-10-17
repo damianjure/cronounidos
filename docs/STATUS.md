@@ -46,6 +46,8 @@ Ver `REVIEW-2026-10-17.md`. La concurrencia y los cortes pasaron sin pérdidas n
 
 ## Próximos pasos sugeridos
 
+**Mejora desktop autorizada:** implementada y verificada localmente (`b462517`, `33712d6`): alta guiada, cabecera/acciones compactas, detalle por secciones, búsqueda de bibliotecas/personas y feedback de movimiento/guardado. Lint/tipos/build y **245 tests**, Chrome **38 base + 24 autenticados** aprobados. [Entrega y límites](DESKTOP-EDITOR.md). Push/CI/Preview de esta mejora pendientes de verificar. Rediseño móvil pospuesto por el propietario; sus regresiones existentes siguen pasando. Sin migraciones, cambios de secretos ni activación de Production.
+
 1. Completar instalación/recorrido de la PWA en Android e iPhone. Preview ya está desplegada; la región `gru1` no requiere otro cambio de infraestructura.
 2. Completar los gates abiertos (seguridad, QA remota, PWA física, alias de respuestas y Production) y operar **una reunión real** con 2–3 líderes antes de sumar funcionalidades.
 3. Deuda técnica: dividir `meeting-editor.tsx` (plan en `IMPLEMENTATION-NOTES.md`).
