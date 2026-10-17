@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { requireAccess } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import { confirmationLabels, confirmationMeetingList, confirmationSnapshot, expectedRows, groupByPerson, type ConfirmationRow } from "@/lib/confirmations/model";
 import { respondAssignments } from "./actions";
 
@@ -13,9 +13,9 @@ function ResponseForm({ meetingId, personId, rows, bulk = false }: {
     <input type="hidden" name="meetingId" value={meetingId} />
     <input type="hidden" name="personId" value={personId} />
     <input type="hidden" name="expected" value={JSON.stringify(expectedRows(rows))} />
-    <Button name="status" value="confirmed" variant="outline">{bulk ? "Confirmar todos" : "Confirmar"}</Button>
-    <Button name="status" value="unavailable" variant="outline">{bulk ? "No disponible en todos" : "No disponible"}</Button>
-    <Button name="status" value="pending" variant="ghost">{bulk ? "Todos pendientes" : "Volver a pendiente"}</Button>
+    <SubmitButton name="status" value="confirmed" variant="outline">{bulk ? "Confirmar todos" : "Confirmar"}</SubmitButton>
+    <SubmitButton name="status" value="unavailable" variant="outline">{bulk ? "No disponible en todos" : "No disponible"}</SubmitButton>
+    <SubmitButton name="status" value="pending" variant="ghost">{bulk ? "Todos pendientes" : "Volver a pendiente"}</SubmitButton>
   </form>;
 }
 

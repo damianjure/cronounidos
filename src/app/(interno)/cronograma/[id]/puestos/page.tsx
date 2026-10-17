@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAccess } from "@/lib/auth";
 import { staffing, conflicts, blockStaffing } from "@/lib/staffing/model";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import {
   configurePosition,
   staffPosition,
@@ -131,7 +131,7 @@ export default async function Positions({
                       required
                     />
                   </label>
-                  <Button>Registrar excepción</Button>
+                  <SubmitButton>Registrar excepción</SubmitButton>
                 </form>
               ) : (
                 <p className="notice">
@@ -193,7 +193,7 @@ export default async function Positions({
                       Confirmo el reemplazo en borrador; no transfiere
                       confirmación.
                     </label>
-                    <Button>Proponer reemplazo</Button>
+                    <SubmitButton>Proponer reemplazo</SubmitButton>
                   </form>
                 </details>
               )}
@@ -240,7 +240,7 @@ export default async function Positions({
                     required
                   />
                 </label>
-                <Button>Agregar puestos</Button>
+                <SubmitButton>Agregar puestos</SubmitButton>
               </form>
             </details>
           )}
@@ -291,17 +291,17 @@ export default async function Positions({
                         />{" "}
                         Confirmo el cambio operativo.
                       </label>
-                      <Button name="operation" value="priority">
+                      <SubmitButton name="operation" value="priority">
                         Cambiar prioridad
-                      </Button>
+                      </SubmitButton>
                       {!p.history.length && (
-                        <Button
+                        <SubmitButton
                           name="operation"
                           value="remove"
                           variant="outline"
                         >
                           Eliminar puesto sin historial
-                        </Button>
+                        </SubmitButton>
                       )}
                     </form>
                   </details>
@@ -362,7 +362,7 @@ export default async function Positions({
                           : ""}
                         .
                       </label>
-                      <Button>Guardar asignación</Button>
+                      <SubmitButton>Guardar asignación</SubmitButton>
                     </form>
                   </details>
                 )}

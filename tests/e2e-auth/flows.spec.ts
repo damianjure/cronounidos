@@ -652,6 +652,7 @@ test('en vivo: dos dispositivos sincronizan, recuperan desconexión y cierran ex
   await expect.poll(()=>realtimeChanges,{timeout:20000}).toBeGreaterThan(0);
   await expect(second.getByRole('region',{name:'Actividad en curso'}).getByRole('heading',{name:'Primera en vivo',exact:true})).toBeVisible({timeout:10000});
   const stale=await client.rpc('transition_live',{p_meeting:meeting.meetingId,p_version:0,p_request:crypto.randomUUID(),p_command:'next'});expect(stale.error?.message).toContain('version conflict');
+  // Live reads go browser→Supabase RPC (not a Vercel server action).
   // Hold a successful read until AFTER the offline event. A late response must
   // not re-enable operation controls on a disconnected device.
   let releaseRead!: () => void;
@@ -659,7 +660,7 @@ test('en vivo: dos dispositivos sincronizan, recuperan desconexión y cierran ex
   let readReady!: () => void;
   const ready = new Promise<void>(resolve => { readReady = resolve; });
   let intercepted = false;
-  await page.route(`**/en-vivo/${meeting.meetingId}`, async route => {
+  await page.route(`**/rest/v1/rpc/get_live_snapshot`, async route => {
    if (route.request().method() !== 'POST' || intercepted) return route.continue();
    intercepted = true;
    const response = await route.fetch();
@@ -690,7 +691,7 @@ test('en vivo: dos dispositivos sincronizan, recuperan desconexión y cierran ex
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await expect(page.getByRole('button',{name:'Finalizar y avanzar',exact:true})).toBeDisabled();
   await expect(page.getByRole('status')).toContainText('Sin conexión');
-  await page.unroute(`**/en-vivo/${meeting.meetingId}`);
+  await page.unroute(`**/rest/v1/rpc/get_live_snapshot`);
   await page.context().setOffline(true);
   await page.evaluate(() => Reflect.deleteProperty(navigator, 'onLine'));
   await expect(page.getByRole('status')).toContainText('Sin conexión');

@@ -1,5 +1,5 @@
 import { requireAccess } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import {
   approveMember,
   provisionUser,
@@ -71,8 +71,11 @@ export default async function Admin({
       {params.error && (
         <p role="alert" className="notice error">
           No se completó la operación ({params.error}). Revisá los datos y la
-          configuración. Si el alta se creó pero falló la membresía, recuperala
-          desde Supabase antes de reintentar.
+          configuración.
+          {params.error === "membresia" &&
+            " Falló la membresía; la cuenta creada se eliminó y podés reintentar con el mismo correo."}
+          {params.error === "membresia-huerfana" &&
+            " Falló la membresía y no se pudo eliminar la cuenta creada: eliminala desde Supabase Auth antes de reintentar."}
         </p>
       )}
       {params.ok && (
@@ -120,7 +123,7 @@ export default async function Admin({
                       ))}
                     </select>
                   </label>
-                  <Button>Aprobar acceso</Button>
+                  <SubmitButton>Aprobar acceso</SubmitButton>
                 </form>
               </li>
             ))}
@@ -166,7 +169,7 @@ export default async function Admin({
                 autoComplete="new-password"
               />
             </label>
-            <Button>Crear acceso pendiente</Button>
+            <SubmitButton>Crear acceso pendiente</SubmitButton>
           </form>
         </section>
       </div>
@@ -206,7 +209,7 @@ export default async function Admin({
                     ))}
                   </select>
                 </label>
-                <Button variant="outline">Vincular persona</Button>
+                <SubmitButton variant="outline">Vincular persona</SubmitButton>
               </form>
               <form action={grantPermission}>
                 <input type="hidden" name="orgId" value={a.orgId} />
@@ -242,7 +245,7 @@ export default async function Admin({
                     ))}
                   </select>
                 </label>
-                <Button variant="outline">Agregar permiso</Button>
+                <SubmitButton variant="outline">Agregar permiso</SubmitButton>
               </form>
               {grants
                 ?.filter((g) => g.subject_user_id === m.user_id)
@@ -255,14 +258,14 @@ export default async function Admin({
                       {teams?.find((t) => t.id === g.team_id)?.name ||
                         "Organización"}
                     </span>
-                    <Button variant="ghost">Revocar</Button>
+                    <SubmitButton variant="ghost">Revocar</SubmitButton>
                   </form>
                 ))}
               {m.user_id !== a.user.id && m.status === "approved" && (
                 <form action={suspendMember}>
                   <input type="hidden" name="orgId" value={a.orgId} />
                   <input type="hidden" name="userId" value={m.user_id} />
-                  <Button variant="outline">Suspender acceso</Button>
+                  <SubmitButton variant="outline">Suspender acceso</SubmitButton>
                 </form>
               )}
               {m.status === "suspended" && (
@@ -270,7 +273,7 @@ export default async function Admin({
                   <input type="hidden" name="orgId" value={a.orgId} />
                   <input type="hidden" name="userId" value={m.user_id} />
                   <input type="hidden" name="role" value="member" />
-                  <Button variant="outline">Reaprobar acceso</Button>
+                  <SubmitButton variant="outline">Reaprobar acceso</SubmitButton>
                 </form>
               )}
             </li>

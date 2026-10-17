@@ -4,12 +4,23 @@ import Link from "next/link";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { browserClient } from "@/lib/supabase/browser";
-import { durationLabel, liveTiming, type LiveSnapshot } from "@/lib/live/model";
+import {
+  durationLabel,
+  liveSnapshot,
+  liveTiming,
+  type LiveSnapshot,
+} from "@/lib/live/model";
 import {
   operateLive,
-  readLive,
   type LiveResult,
 } from "@/app/(interno)/en-vivo/[id]/actions";
+// Reads go straight from the browser to Supabase (RPC under RLS), not through
+// Vercel: many devices behind one church Wi-Fi IP polling a Vercel function
+// can trip Vercel's automatic bot mitigation mid-meeting. See
+// docs/REVIEW-2026-10-17.md. Commands still use the server action.
+const POLL_MS = 10000;
+const POLL_WITH_REALTIME_MS = 45000;
+const REALTIME_JITTER_MS = 2500;
 type Command = "start" | "next" | "finish_block" | "close";
 export function LiveConsole({ initial }: { initial: LiveSnapshot }) {
   const [snapshot, setSnapshot] = useState<LiveSnapshot | null>(initial);
@@ -29,6 +40,9 @@ export function LiveConsole({ initial }: { initial: LiveSnapshot }) {
   } | null>(null);
   const mounted = useRef(true);
   const denied = useRef(false);
+  const supabase = useRef<ReturnType<typeof browserClient> | null>(null);
+  const realtimeOk = useRef(false);
+  const lastRead = useRef(0);
   const apply = useCallback((result: LiveResult, started: number) => {
     if (!mounted.current) return;
     if (!result.ok) {
@@ -58,7 +72,26 @@ export function LiveConsole({ initial }: { initial: LiveSnapshot }) {
     if (!navigator.onLine) return;
     const started = performance.now();
     try {
-      const result = await readLive(initial.meetingId);
+      lastRead.current = Date.now();
+      const { data, error } = await (supabase.current ??= browserClient()).rpc("get_live_snapshot", {
+        p_meeting: initial.meetingId,
+      });
+      // supabase-js reports transport failures as errors without a PostgREST
+      // code: treat them like a thrown network error (offline handling below).
+      if (error && !error.code) throw new Error("network");
+      const parsed = error ? null : liveSnapshot.safeParse(data);
+      const result: LiveResult =
+        parsed && parsed.success
+          ? { ok: true, snapshot: parsed.data }
+          : {
+              ok: false,
+              message:
+                "No se pudo sincronizar la reunión. Revisá tu conexión y permisos.",
+              denied:
+                !!error &&
+                (error.message.includes("Forbidden") ||
+                  error.message.includes("Published meeting")),
+            };
       apply(result, started);
       // A successful read may arrive after the browser emitted `offline`.
       // Keep the latest connectivity state instead of reviving stale controls.
@@ -87,8 +120,11 @@ export function LiveConsole({ initial }: { initial: LiveSnapshot }) {
       if (ref) setNow(ref.server + performance.now() - ref.local);
     }, 1000);
     const poll = setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, 10000);
+      if (document.visibilityState !== "visible") return;
+      // With Realtime healthy, polling is only a safety net.
+      const every = realtimeOk.current ? POLL_WITH_REALTIME_MS : POLL_MS;
+      if (Date.now() - lastRead.current >= every - 500) void refresh();
+    }, POLL_MS);
     const reconnect = () => {
       setOnline(navigator.onLine);
       if (navigator.onLine) void refresh();
@@ -100,7 +136,7 @@ export function LiveConsole({ initial }: { initial: LiveSnapshot }) {
     window.addEventListener("offline", reconnect);
     window.addEventListener("focus", focus);
     document.addEventListener("visibilitychange", focus);
-    const client = browserClient();
+    const client = (supabase.current ??= browserClient());
     let channel: RealtimeChannel | null = null;
     async function connect() {
       const { data, error } = await client.auth.getSession();
@@ -124,12 +160,17 @@ export function LiveConsole({ initial }: { initial: LiveSnapshot }) {
             filter: `meeting_id=eq.${initial.meetingId}`,
           },
           () => {
-            void refresh();
+            // Spread the refetch so every device does not hit at once.
+            setTimeout(
+              () => void refresh(),
+              Math.random() * REALTIME_JITTER_MS,
+            );
           },
         )
         .on("system", {}, (payload) => {
           if (!mounted.current || payload.extension !== "postgres_changes")
             return;
+          realtimeOk.current = payload.status === "ok";
           setRealtime(payload.status === "ok");
           if (payload.status === "ok") void refresh();
           else
@@ -138,7 +179,10 @@ export function LiveConsole({ initial }: { initial: LiveSnapshot }) {
             );
         })
         .subscribe((status) => {
-          if (mounted.current && status !== "SUBSCRIBED") setRealtime(false);
+          if (mounted.current && status !== "SUBSCRIBED") {
+            realtimeOk.current = false;
+            setRealtime(false);
+          }
         });
     }
     void connect().catch(() => {

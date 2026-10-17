@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import { requireAccess } from "@/lib/auth";
 import { signOut } from "@/app/auth/actions";
 export default async function Dashboard() {
@@ -23,7 +23,7 @@ export default async function Dashboard() {
           </p>
         </div>
         <form action={signOut}>
-          <Button variant="outline">Cerrar sesión</Button>
+          <SubmitButton variant="outline">Cerrar sesión</SubmitButton>
         </form>
       </div>
       {notifications > 0 && (

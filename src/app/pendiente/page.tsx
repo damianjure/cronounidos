@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { accessContext } from "@/lib/auth";
 import { requestAccess, signOut } from "@/app/auth/actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 export default async function Pending({
   searchParams,
 }: {
@@ -40,10 +40,10 @@ export default async function Pending({
             maxLength={60}
           />
         </label>
-        <Button>Solicitar acceso</Button>
+        <SubmitButton>Solicitar acceso</SubmitButton>
       </form>
       <form action={signOut}>
-        <Button variant="outline">Cerrar sesión</Button>
+        <SubmitButton variant="outline">Cerrar sesión</SubmitButton>
       </form>
     </section>
   );

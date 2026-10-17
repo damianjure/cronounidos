@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import { BlockTypeForm } from "@/components/editor/block-type-form";
 import { fieldDefinition } from "@/lib/editor/model";
 import { editorContext } from "@/lib/editor/server";
@@ -60,7 +61,7 @@ export default async function Catalogos({
                 <details><summary>Editar definición</summary><BlockTypeForm initial={{ id: row.id, name: row.name, version: row.version, fields }} /></details>
                 <form action={deleteBlockType}>
                   <input type="hidden" name="id" value={row.id} />
-                  <Button variant="ghost">Eliminar tipo</Button>
+                  <SubmitButton variant="ghost">Eliminar tipo</SubmitButton>
                 </form>
               </li>
             );
@@ -78,7 +79,7 @@ export default async function Catalogos({
                 <input type="hidden" name="id" value={row.id} />
                 <input type="hidden" name="version" value={row.definition_version} />
                 <label className="field">Nombre <input name="name" defaultValue={row.name} minLength={2} maxLength={120} required /></label>
-                <Button variant="outline">Renombrar plantilla</Button>
+                <SubmitButton variant="outline">Renombrar plantilla</SubmitButton>
               </form>
               <form action={replaceTemplateDefinition} className="field-grid">
                 <input type="hidden" name="id" value={row.id} />
@@ -92,7 +93,7 @@ export default async function Catalogos({
                     ))}
                   </select>
                 </label>
-                <Button variant="outline" className="catalog-template-action">Actualizar plantilla para futuras reuniones</Button>
+                <SubmitButton variant="outline" className="catalog-template-action">Actualizar plantilla para futuras reuniones</SubmitButton>
               </form>
               <details>
                 <summary>Aplicar v{row.definition_version} a reuniones existentes</summary>
@@ -112,12 +113,12 @@ export default async function Catalogos({
                     ))}
                   </div>
                   <label className="field"><span><input type="checkbox" name="confirm" value="yes" required /> Confirmo que seleccioné estas reuniones y revisaré los borradores antes de publicarlos.</span></label>
-                  <Button variant="outline">Crear borradores desde esta plantilla</Button>
+                  <SubmitButton variant="outline">Crear borradores desde esta plantilla</SubmitButton>
                 </form>
               </details>
               <form action={deleteTemplate}>
                 <input type="hidden" name="id" value={row.id} />
-                <Button variant="ghost">Eliminar plantilla</Button>
+                <SubmitButton variant="ghost">Eliminar plantilla</SubmitButton>
               </form>
             </li>
           ))}

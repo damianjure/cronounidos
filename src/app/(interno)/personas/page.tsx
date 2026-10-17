@@ -1,5 +1,5 @@
 import { requireAccess } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import { addTeamMember, deleteDirectoryItem, removeTeamMember, saveDirectoryItem } from "./actions";
 
 type Person = { id: string; first_name: string; last_name: string; active: boolean };
@@ -24,7 +24,7 @@ function DirectoryForm({ kind, item, teamId }: {
       {kind === "roles" && <input type="hidden" name="teamId" value={teamId ?? ""} />}
     </>}
     <label><input type="checkbox" name="active" defaultChecked={active} /> Activo</label>
-    <Button>{item ? "Guardar cambios" : "Agregar"}</Button>
+    <SubmitButton>{item ? "Guardar cambios" : "Agregar"}</SubmitButton>
   </form>;
 }
 
@@ -36,7 +36,7 @@ function DeleteForm({ kind, id, teamId }: { kind: "people" | "teams" | "roles"; 
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="teamId" value={teamId ?? ""} />
-      <Button variant="ghost">Confirmar eliminación</Button>
+      <SubmitButton variant="ghost">Confirmar eliminación</SubmitButton>
     </form>
   </details>;
 }
@@ -104,7 +104,7 @@ export default async function People({ searchParams }: { searchParams: Promise<{
             return <div key={entry.id}>{person.first_name} {person.last_name}
               {can(team.id, "assign") && <form action={removeTeamMember}>
                 <input type="hidden" name="id" value={entry.id} /><input type="hidden" name="teamId" value={team.id} />
-                <Button variant="ghost">Quitar del equipo</Button>
+                <SubmitButton variant="ghost">Quitar del equipo</SubmitButton>
               </form>}
             </div>;
           })}
@@ -114,7 +114,7 @@ export default async function People({ searchParams }: { searchParams: Promise<{
               <option value="" disabled>Elegí una persona</option>
               {people.filter((p) => p.active && !members.some((entry) => entry.team_id === team.id && entry.person_id === p.id)).map((p) =>
                 <option key={p.id} value={p.id}>{p.first_name} {p.last_name}</option>)}
-            </select></label><Button>Agregar al equipo</Button>
+            </select></label><SubmitButton>Agregar al equipo</SubmitButton>
           </form>}
         </li>)}</ul>
         {!teams.length && <p className="muted">No hay equipos disponibles para tu cuenta.</p>}

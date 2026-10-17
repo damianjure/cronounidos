@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import { editorContext } from "@/lib/editor/server";
 import type { CatalogKind } from "@/lib/editor/catalog-input";
 import { saveCatalogItem, deleteCatalogItem } from "./actions";
@@ -67,7 +68,7 @@ function ItemForm({ kind, item, series, people }: {
           </label>
         </div>
       )}
-      <Button>{item ? "Guardar cambios" : "Agregar al catálogo"}</Button>
+      <SubmitButton>{item ? "Guardar cambios" : "Agregar al catálogo"}</SubmitButton>
     </form>
   );
 }
@@ -101,7 +102,7 @@ export default async function Contents({
       </div>
       {params.error && <p className="notice error" role="alert">{params.error === "uso" ? "El recurso está en uso. Cambiá primero sus vínculos en un borrador." : params.error === "conflicto" ? "El recurso cambió. Recargá la página antes de intentar de nuevo." : params.error === "datos" ? "Revisá los datos enviados." : params.error === "archivo" ? "Elegí una imagen PNG/JPEG/WebP o PDF de hasta 5 MB." : params.error === "subida" ? "No se pudo subir el archivo privado." : "No se pudo guardar el cambio."}</p>}
       {params.ok && <p className="notice" role="status">Catálogo actualizado.</p>}
-      {params.cleanup && <div className="notice" role="status">El catálogo se actualizó, pero quedó una limpieza de archivo pendiente. Podés reintentar sin perder el cambio.<form action={retryResourceFileCleanup}><Button variant="outline">Reintentar limpieza</Button></form></div>}
+      {params.cleanup && <div className="notice" role="status">El catálogo se actualizó, pero quedó una limpieza de archivo pendiente. Podés reintentar sin perder el cambio.<form action={retryResourceFileCleanup}><SubmitButton variant="outline">Reintentar limpieza</SubmitButton></form></div>}
       {sections.map(({ kind, label }, index) => (
         <section className="panel" style={{ marginBottom: 24 }} key={kind}>
           <h2>{label}</h2>
@@ -114,7 +115,7 @@ export default async function Contents({
                 <label className="field">Imagen o PDF (máximo 5 MB)
                   <input name="file" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" required />
                 </label>
-                <Button>Subir recurso</Button>
+                <SubmitButton>Subir recurso</SubmitButton>
               </form>
             </details>
           )}
@@ -132,7 +133,7 @@ export default async function Contents({
                         <input type="hidden" name="oldPath" value={String(item.storage_path)} />
                         <label className="field">Título <input name="title" defaultValue={item.title} required maxLength={200} /></label>
                         <label className="field">Archivo nuevo (máximo 5 MB)<input name="file" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" required /></label>
-                        <Button variant="outline">Reemplazar archivo</Button>
+                        <SubmitButton variant="outline">Reemplazar archivo</SubmitButton>
                       </form>
                     </details>
                     <details><summary>Eliminar archivo privado</summary>
@@ -141,7 +142,7 @@ export default async function Contents({
                         <input type="hidden" name="id" value={item.id} />
                         <input type="hidden" name="oldPath" value={String(item.storage_path)} />
                         <label><input type="checkbox" name="confirm" value="yes" required /> Confirmo que quiero eliminar este recurso</label>
-                        <Button variant="ghost">Eliminar archivo privado</Button>
+                        <SubmitButton variant="ghost">Eliminar archivo privado</SubmitButton>
                       </form>
                     </details>
                   </>
@@ -151,7 +152,7 @@ export default async function Contents({
                     <form action={deleteCatalogItem}>
                       <input type="hidden" name="kind" value={kind} />
                       <input type="hidden" name="id" value={item.id} />
-                      <Button variant="ghost">Eliminar</Button>
+                      <SubmitButton variant="ghost">Eliminar</SubmitButton>
                     </form>
                   </>
                 )}

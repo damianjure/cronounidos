@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import { requireAccess } from "@/lib/auth";
 import { fieldDefinition, safeUrl } from "@/lib/editor/model";
 import { TeamCustomFields } from "@/components/editor/team-custom-fields";
@@ -75,7 +76,7 @@ export default async function TeamNotes({
                 <label className="field">Nota interna
                   <textarea name="notes" defaultValue={block.notes} maxLength={12000} rows={4} />
                 </label>
-                <Button variant="outline">Guardar nota</Button>
+                <SubmitButton variant="outline">Guardar nota</SubmitButton>
               </form>
               <TeamCustomFields key={`${block.id}-${snapshot.version}`} meetingId={id} teamId={teamId} blockId={block.id} version={snapshot.version} schema={block.fieldSchema} initialValues={block.customFields} />
               {responsibles && <TeamResponsibles meetingId={id} teamId={teamId} blockId={block.id} data={responsibles} />}
@@ -96,7 +97,7 @@ export default async function TeamNotes({
                         <input type="hidden" name="blockId" value={block.id} />
                         <input type="hidden" name="resourceId" value={resource.id} />
                         <input type="hidden" name="version" value={snapshot.version} />
-                        <Button variant="outline">Confirmar desvinculación</Button>
+                        <SubmitButton variant="outline">Confirmar desvinculación</SubmitButton>
                       </form>
                     </details>
                   </li>)}
@@ -108,7 +109,7 @@ export default async function TeamNotes({
                   <input type="hidden" name="version" value={snapshot.version} />
                   <label className="field">Nombre del enlace<input name="title" required maxLength={200} /></label>
                   <label className="field">URL HTTPS<input name="url" type="url" required maxLength={2048} placeholder="https://..." /></label>
-                  <Button variant="outline">Agregar enlace</Button>
+                  <SubmitButton variant="outline">Agregar enlace</SubmitButton>
                 </form>
               </div>
             </li>

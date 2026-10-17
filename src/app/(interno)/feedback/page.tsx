@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAccess } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import {
   feedbackLabels,
   feedbackCategory,
@@ -113,7 +113,7 @@ export default async function Feedback({
               <p id={`privacy-${request.id}`} className="muted">
                 No incluyas contraseñas ni datos sensibles de otras personas.
               </p>
-              <Button type="submit">Enviar feedback</Button>
+              <SubmitButton type="submit">Enviar feedback</SubmitButton>
             </form>
           )}
         </section>

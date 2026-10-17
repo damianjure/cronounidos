@@ -124,6 +124,10 @@ export function MeetingEditor({
   const [busy, setBusy] = useState(false);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const pending = useRef(false);
+  // Moves requested while a save is in flight. They are shown optimistically
+  // and replayed, in order, on top of the persisted result (never on a stale
+  // version). A failed save discards them together with its rollback.
+  const queuedMoves = useRef<{ key: string; target: number }[]>([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [failDemo, setFailDemo] = useState(false);
@@ -214,23 +218,47 @@ export function MeetingEditor({
     }
     pending.current = false;
     setBusy(false);
+    const queued = queuedMoves.current;
+    queuedMoves.current = [];
+    if (!queued.length) return;
+    if (!result.ok) {
+      setError(
+        `${result.error} Los movimientos pendientes también se descartaron.`,
+      );
+      return;
+    }
+    const base = result.snapshot;
+    const blocks = queued.reduce(
+      (current, m) =>
+        current.some((b) => b.clientKey === m.key)
+          ? reorder(current, m.key, m.target)
+          : current,
+      base.blocks,
+    );
+    await persist({ ...base, blocks }, base);
+  }
+  function requestMove(key: string, target: number) {
+    if (pending.current) {
+      queuedMoves.current.push({ key, target });
+      setSnapshot((s) => ({ ...s, blocks: reorder(s.blocks, key, target) }));
+      setMessage("Movimiento en cola: se guarda al terminar el guardado actual.");
+      return;
+    }
+    void persist({
+      ...snapshot,
+      blocks: reorder(snapshot.blocks, key, target),
+    });
   }
   async function move(key: string, offset: number) {
     const index = snapshot.blocks.findIndex((b) => b.clientKey === key);
-    await persist({
-      ...snapshot,
-      blocks: reorder(snapshot.blocks, key, index + offset),
-    });
+    requestMove(key, index + offset);
   }
   function keyboardToggle(key: string) {
     if (keyboardDrag?.key === key) {
       const before = snapshot.blocks.findIndex((block) => block.clientKey === key);
       const target = keyboardDrag.target;
       setKeyboardDrag(null);
-      if (before !== target) void persist({
-        ...snapshot,
-        blocks: reorder(snapshot.blocks, key, target),
-      });
+      if (before !== target) requestMove(key, target);
       return;
     }
     const index = snapshot.blocks.findIndex((block) => block.clientKey === key);
@@ -248,10 +276,7 @@ export function MeetingEditor({
       (b) => b.clientKey === event.over?.id,
     );
     if (target < 0) return;
-    void persist({
-      ...snapshot,
-      blocks: reorder(snapshot.blocks, String(event.active.id), target),
-    });
+    requestMove(String(event.active.id), target);
   }
   return (
     <>
