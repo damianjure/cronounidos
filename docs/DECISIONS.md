@@ -68,6 +68,7 @@ La idempotencia externa tiene TTL, no duración infinita: payload/key congelados
 - Se agrega CSP en `next.config.ts` como **`Content-Security-Policy-Report-Only`**: no bloquea nada; las violaciones aparecen en la consola del navegador. Orígenes: `'self'` y el origen de `NEXT_PUBLIC_SUPABASE_URL` (HTTPS y WSS para Realtime). `frame-ancestors 'none'`, `object-src 'none'`.
 - `'unsafe-inline'` en scripts/estilos es necesario hoy para Next.js sin nonces; endurecer con nonces es mejora posterior.
 - Gate de Production: recorrer Preview (login, editor, subida, en vivo, feedback, PWA) sin violaciones y cambiar el header a `Content-Security-Policy`.
+- **Actualización 17/10/2026:** recorrido hecho y header cambiado a `Content-Security-Policy`. La única violación propia era la prueba `new Function` de zod v4 (no rompe nada porque zod usa otro camino), y se evita con `z.config({ jitless: true })` en `providers.tsx`. El toolbar de Vercel (`vercel.live`) se permite en `script-src`/`frame-src` solo con `VERCEL_ENV=preview`; en cualquier otro entorno `frame-src 'none'`.
 
 ## Altas de usuarios: limpieza ante fallo — 17/10/2026
 - Si `register_invited_member` falla después de crear/invitar la cuenta en Auth, `provisionUser` elimina esa cuenta con el cliente privilegiado de servidor (`error=membresia`, se puede reintentar con el mismo correo). Si el borrado también falla, `error=membresia-huerfana` pide eliminarla desde Supabase Auth. Una invitación ya enviada queda con enlace inválido.

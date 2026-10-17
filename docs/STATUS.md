@@ -15,17 +15,17 @@
 | Feedback +10 min in-app, panel solo admin | ✅ Sprint 5 (in-app) |
 | Correo de feedback (Brevo) | ✅ Aceptado por Brevo en Preview (17/10, tras desactivar el bloqueo de IP); falta confirmar la recepción |
 
-Última CI verde: `ab65774` (17/10, run 39004001214: lint, typecheck, 219 tests / 17 suites, build y E2E autenticada). La E2E de modo en vivo fallaba de forma intermitente en `976bc4d` y anteriores; con lecturas directas a Supabase la espera apuntaba a la server action vieja y se corrigió en `ab65774`.
+Última CI verde: `0f37490` (17/10, run 39004816441, con la CSP aplicada: lint, typecheck, 219 tests / 17 suites, build y E2E autenticada). La E2E de modo en vivo fallaba de forma intermitente en `976bc4d` y anteriores; con lecturas directas a Supabase la espera apuntaba a la server action vieja y se corrigió en `ab65774`.
 
 ## Gates antes de Production
 
 1. **Brevo:** ~~bloqueo de IP~~ resuelto y envío aceptado en Preview (17/10). Falta confirmar la recepción en la bandeja y configurar las variables de Production (ver `EMAIL.md`).
-2. **CSP:** recorrer Preview sin violaciones en consola y pasar `Content-Security-Policy-Report-Only` → `Content-Security-Policy` (`DECISIONS.md`).
-3. **Supabase Auth:** activar protección de contraseñas filtradas.
-4. **Scheduler:** `scripts/check-scheduler.sql` sin errores en el entorno destino (`SETUP.md`).
+2. ~~**CSP**~~ aplicada (17/10, `0f37490`): se recorrieron en Preview las páginas públicas e internas con sesión de admin (inicio, cronograma, editor, contenidos, catálogos, calendario, cobertura, confirmaciones, personas, administración, feedback, en vivo con Realtime). No hubo violaciones propias; la prueba `new Function` de zod se evita con `jitless`. Falta probar una subida de archivo con la CSP aplicada.
+3. **Supabase Auth:** activar protección de contraseñas filtradas (el advisor la sigue marcando el 17/10; se activa en el panel: Auth → Password security).
+4. **Scheduler:** ✅ en Preview (17/10): `pg_cron` y `pg_net` presentes, los 2 jobs activos y más de 1000 ejecuciones `succeeded` en 24 h. Repetir `scripts/check-scheduler.sql` si Production usa otro proyecto Supabase.
 5. **QA remota** de Auth/RLS con cuentas de distintos roles y aceptación de invitación.
 6. **PWA en dispositivos físicos** iOS/Android (instalación y gestos).
-7. **Región `gru1`** (ya configurada en `vercel.json`, falta deploy) y prueba del modo en vivo con muchos dispositivos detrás de una misma IP; las lecturas en vivo ya van directo a Supabase (ver `REVIEW-2026-10-17.md`).
+7. **Región `gru1`:** ✅ desplegada y medida (17/10, 12 pedidos espaciados por ruta): `/` p50 250 ms (antes ~700 ms en `iad1`), `/ingresar` p50 171 ms. Falta probar el modo en vivo con muchos dispositivos reales detrás de una misma IP; las lecturas en vivo ya van directo a Supabase (ver `REVIEW-2026-10-17.md`).
 8. **Dominio** `crono.damianjure.com` (DNS en Cloudflare), redirects de Auth y variables de Production.
 
 ## Cambios del 17/10/2026 (verificados en CI `ab65774`)
