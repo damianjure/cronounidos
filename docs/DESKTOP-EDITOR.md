@@ -60,3 +60,14 @@ Comprobaciones remotas limitadas: manifest 200; cronograma sin sesión 307 a ing
 **Configuración pendiente de contenido:** el selector del borrador real solo ofreció Actividad personalizada; no hay tipos configurados en el catálogo consultado. Configurarlos mediante Tipos y plantillas antes de esperar tarjetas de Alabanza/Mensaje/etc. No se cargaron seeds ni se crearon tipos remotos por este cambio visual.
 
 No se activa Production ni se dan por cerrados los demás gates remotos/operativos de `STATUS.md`.
+
+## Ajuste puntual de alineación — 17/10/2026
+
+Pedido: solo compactar/alinear minutos y flechas y llevar «Opciones avanzadas» al final del detalle. Sin ampliar alcance ni rediseñar móvil.
+
+- Solapamiento reproducido con una prueba de geometría: columna desktop del handle de 36 px frente al mínimo real de 44 px. Ahora reserva 44 px y un gap de 8 px; la hora no queda debajo del botón/foco.
+- Marcos visibles de handle/flechas de 34 px, pero área interactiva de 44×44 px y foco/teclado/táctil conservados. Input de minutos de 60 px con unidad a su lado; cuadrícula ancha reserva columnas explícitas para duración y flechas.
+- El `<details>` de Opciones avanzadas se movió físicamente después de Actividades paralelas, conservando el contenido, permisos y enlace «Ir a avanzado». No es solo un orden CSS que contradiga el recorrido de teclado.
+- Regresión a 1100/1280/1450/1600 px, incluyendo título largo, cajas sin intersección y apertura de la última sección. La primera ejecución detectó el bug original; tras arreglar, el selector de la prueba se acotó a secciones directas (no al `<details>` anidado de crear campo personalizado).
+- Lint, tipos, 245 tests y build aprobados. E2E base **39 aprobadas / 9 combinaciones no aplicables**; las regresiones móviles existentes no se omitieron. Vista ancha claro/oscuro y axe aprobados. Capturas en `/tmp/crono-ui-align-results/`; logs `/tmp/crono-ui-align-check.log` y `/tmp/crono-ui-align-e2e-final.log`.
+- Fuente: commit `6f2788e`, push a `codex/sprint-2-editor` (Preview, nunca main). Sin modificaciones de datos/secretos/migraciones/Production. Resultado de la verificación autenticada y Preview registrado en STATUS.

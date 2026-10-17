@@ -266,9 +266,11 @@ test("desktop ancho: filas compactas y detalle legible en ambos temas", async ({
 test("controles no se superponen y opciones avanzadas es la última sección", async ({
   page,
 }) => {
-  await page.getByLabel("Nombre de la actividad", { exact: true }).fill(
-    "Prueba de sonido y repaso musical con todos los equipos de la celebración",
-  );
+  await page
+    .getByLabel("Nombre de la actividad", { exact: true })
+    .fill(
+      "Prueba de sonido y repaso musical con todos los equipos de la celebración",
+    );
   for (const width of [1100, 1280, 1450, 1600]) {
     await page.setViewportSize({ width, height: 1000 });
     const row = page.locator(".editor-timeline > li").first();
