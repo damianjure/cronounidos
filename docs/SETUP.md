@@ -182,3 +182,11 @@ Seguir **[EMAIL.md](EMAIL.md)** para cargar API key y secreto independiente como
 ### Credencial aleatoria gestionada con Infisical — 16/10/2026
 
 El propietario autorizó generar y gestionar el secreto de worker con Infisical. Se creó `FEEDBACK_WORKER_SECRET` en **Desarrollo IA / Development / `/crono-unidos/preview`** y se aprovisionó el mismo valor en Vercel Preview (rama `codex/sprint-2-editor`, Sensitive/Secret) y en Vault del Supabase independiente con nombre `crono_unidos_feedback_worker_secret`. Valores no mostrados ni versionados; archivo temporal privado eliminado. Se verificaron metadata/existencia, no se descifraron secretos existentes. Infisical todavía no tiene sincronización automática configurada. La API key real de Brevo permanece en Vercel, intacta y no copiada a Infisical. El callback URL sigue ausente y el canal no fue habilitado: no hubo HTTP ni correo. Ver el estado actualizado en `EMAIL.md` antes de repetir o rotar credenciales.
+
+### Preflight de dominio y automatización — 16/10/2026
+
+Consulta DNS de solo lectura: los servidores autoritativos de `damianjure.com` son **Cloudflare** (`donna.ns.cloudflare.com`, `lee.ns.cloudflare.com`), no Vercel. La consulta autoritativa de A y CNAME para el candidato `crono.damianjure.com` devolvió **NXDOMAIN**. El equipo Vercel todavía no tiene dominios registrados en su listado. Esto no reserva el subdominio ni constituye una conexión de Production.
+
+Al conectar el dominio aprobado, obtener primero de Vercel el destino DNS exacto del proyecto y cargar solo el registro del subdominio en **Cloudflare**. No inventar un CNAME universal, trasladar nameservers ni modificar MX, DKIM o DMARC existentes. Los MX actuales apuntan a Cloudflare Email Routing; eso no demuestra que el alias `crono@damianjure.com` exista. Confirmar su entrega por separado.
+
+El propietario confirmó la creación del bypass de automatización y Vercel mostró una segunda credencial recién agregada, sin revelar su valor ni modificar la anterior. La consulta de metadata en Supabase aún no encontró `crono_unidos_feedback_vercel_bypass`: se dejó el formulario Vault del proyecto correcto con nombre/descripcion preparados, para que el propietario pegue el valor directamente. Callback ausente y canal desactivado. No confundir bypass creado en Vercel con credencial ya disponible en Vault.

@@ -49,3 +49,9 @@ El CI `38969223682` falló en móvil: después de `offline`, el botón de avance
 Causa: `refresh()` escribía `setOnline(true)` al recibir cualquier lectura exitosa, aunque el navegador ya hubiera emitido `offline`. Ahora consulta `navigator.onLine` al resolver; conserva la última lectura sin reactivar controles offline. Se mantiene además el guard de conectividad al operar, las RPCs/versiones/idempotencia y la recuperación por Realtime. No se agregaron retries de test ni se relajó la aserción. El control de red existe solamente en la prueba, no en código de producción.
 
 Verificación posterior local: `npm run check` **212/212 pruebas, 15 suites**, lint, typecheck y build correctos; `npm run test:e2e:auth:local` **18/18 Chrome desktop/mobile**, con la respuesta tardía controlada en ambos proyectos y avance/reconexión/cierre posteriores. Logs locales `/tmp/crono-offline-check.log` y `/tmp/crono-offline-regression-after.log`; la pasada roja se conserva en `/tmp/crono-offline-regression-before.log`. No hay migraciones nuevas ni cambios de configuración remota. Falta verificar CI/Preview de este arreglo; no implica QA física ni habilitación de correo/Production.
+
+### Corrección de desconexión verificada en CI
+
+La ejecución **38994327354**, correspondiente al commit correctivo **`de99f2d`**, terminó **success** en ambos jobs (`foundation` y `authenticated-local`). La regresión controlada de respuesta tardía quedó aprobada en CI, no solamente local. El CI anterior fallido se conserva como antecedente; no se omitió el caso ni se agregó retry para ocultarlo.
+
+Preview del checkpoint documental posterior `7bbda3d`: **Ready**, deployment `dpl_A2v76Azm75qAthNgrUfWJaX5cfBt`, alias estable de rama. `POST /api/internal/feedback-email` sin autorización de aplicación devolvió **401 / unauthorized** usando acceso autorizado de Vercel CLI. No se reclamó correo ni se activó Production.

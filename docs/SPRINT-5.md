@@ -48,7 +48,7 @@ Ambas migraciones se probaron primero localmente y después se aplicaron al remo
 
 ### Trabajo pendiente
 
-1. Completar flujo autenticado remoto, sin copiar fixtures locales a producción. El CI del worker `38968856850` y las ejecuciones posteriores `38993116371` / `38993129802` terminaron success. La carrera de desconexión detectada en el run intermedio `38969223682` se documenta y corrige en `SPRINT-4.md`; su nueva regresión requiere su propio CI.
+1. Completar flujo autenticado remoto, sin copiar fixtures locales a producción. El CI del worker `38968856850` y las ejecuciones posteriores `38993116371` / `38993129802` terminaron success. La carrera de desconexión detectada en el run intermedio `38969223682` se documenta y corrige en `SPRINT-4.md`; su nueva regresión pasó ambos jobs en el CI `38994327354` (`de99f2d`).
 2. Activar y probar realmente el outbox/transporte Brevo ya implementado: API key segura, remitente verificado, secreto de worker/Vault y protección de Preview. Auth SMTP no equivale a este transporte. No se enviaron correos de feedback ni se declara ese canal operativo.
 3. Preparar/verificar subdominio y remitente elegidos, redirects y variables de Production, QA remota de roles/Auth/invitación y pruebas PWA físicas. No lanzar Production antes de estos gates.
 
