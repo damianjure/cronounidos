@@ -182,3 +182,11 @@ El control nativo de Brave devolvió `noWindowsAvailable` al intentar scroll/coo
 Por tanto, **no están verificados todavía**: trayectoria/animación del drag, movimiento arriba/abajo, restauración del orden, persistencia tras recargar, expansión de notas, edición del bloque existente y tiempos reales de carga. El anuncio accesible de un drop anterior no demuestra que Codex haya realizado ni observado el movimiento. No se atribuye el bloqueo de automatización a un defecto del sitio.
 
 La propuesta visual queda ampliada con filas reales; la prueba interactiva de movimiento sigue pendiente por acceso. No se modificó código de Crono Unidos, no se ejecutaron suites nuevas y no se cerraron gates de Production.
+
+### Continuación con Brave visible
+
+El propietario confirmó que Brave estaba visible. Una lectura posterior mostró un **cambio de orden realizado fuera de las acciones de Codex**: lectura de 1 min → bienvenida de 5 min → mensaje de 40 min. Antes era bienvenida → lectura → mensaje. El total continuó en 46/90 min y 44 restantes: el cambio de posición no alteró las duraciones visibles. Se verificó el resultado antes/después, **no** la trayectoria del puntero, la animación intermedia ni la persistencia remota. No corresponde restaurar el orden anterior porque el último cambio provino del propietario.
+
+Se abrió por accesibilidad el lápiz de bienvenida: **Editar Bloque** muestra título, duración 5 min, nota existente y Cancelar/Guardar. No se editaron campos ni se pulsó Guardar. Los intentos de Cancelar/cerrar no mostraron cambio verificable; el control nativo de scroll sigue devolviendo `noWindowsAvailable`. Puede quedar abierto ese formulario sin cambios: el propietario puede cerrarlo con Cancelar. No se confirma expansión de notas, éxito de guardado ni prueba de error.
+
+**Conclusión de la revisión disponible:** tomar handle separado, filas resumidas, icono por tipo, detalles opcionales y edición contextual; mantener las horas por fila, controles accesibles, anuncios en español, cola/rollback y modelo de publicación de Crono Unidos. Se completó el análisis de lo observable, pero la validación interactiva de drag/carga/guardado continúa explícitamente limitada por la herramienta. No se debe reintentar indefinidamente ni atribuir este bloqueo a Tecnoiglesia.
