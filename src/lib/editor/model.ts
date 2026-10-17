@@ -172,7 +172,7 @@ export const defaultCopyOptions: CopyOptions = {
   notes: false,
   resources: true,
 };
-export type CatalogItem = { id: string; name: string };
+export type CatalogItem = { id: string; name: string; description?: string };
 export type Catalog = {
   teams: CatalogItem[];
   people: CatalogItem[];

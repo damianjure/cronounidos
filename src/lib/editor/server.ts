@@ -33,7 +33,7 @@ export async function loadCatalog(): Promise<Catalog> {
     ["people", "id,first_name,last_name"],
     ["roles", "id,name,team_id"],
     ["block_types", "id,name,field_schema_json"],
-    ["songs", "id,title"],
+    ["songs", "id,title,artist"],
     ["announcements", "id,title"],
     ["messages", "id,title"],
     ["resources", "id,title,url,storage_path"],
@@ -71,7 +71,13 @@ export async function loadCatalog(): Promise<Catalog> {
       ...blockTypes[i],
       fieldSchema: z.array(fieldDefinition).parse(r.field_schema_json),
     })),
-    songs: items(4),
+    songs: items(4).map((item, index) => ({
+      ...item,
+      description:
+        typeof results[4][index].artist === "string"
+          ? (results[4][index].artist as string)
+          : undefined,
+    })),
     announcements: items(5),
     messages: items(6),
     resources: results[7].map((r, i) => ({

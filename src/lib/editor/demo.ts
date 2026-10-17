@@ -32,8 +32,14 @@ export function demoEditor(): { snapshot: EditorSnapshot; catalog: Catalog } {
       teams: [{ id: id(2), name: "Equipo ficticio" }],
       people: [{ id: id(3), name: "Alex Ejemplo" }],
       roles: [{ id: id(4), name: "Rol de prueba", teamId: id(2) }],
-      blockTypes: [],
-      songs: [{ id: id(5), name: "Canción de prueba" }],
+      blockTypes: [{ id: id(9), name: "Mensaje", fieldSchema: [] }],
+      songs: [
+        {
+          id: id(5),
+          name: "Canción de prueba",
+          description: "Artista ficticio",
+        },
+      ],
       announcements: [{ id: id(6), name: "Anuncio ficticio" }],
       messages: [{ id: id(7), name: "Mensaje de prueba" }],
       resources: [
