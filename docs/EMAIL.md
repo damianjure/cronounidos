@@ -2,7 +2,7 @@
 
 ## Estado al 16/10/2026
 
-Código preparado y migraciones 30–33 aplicadas en local y en el proyecto independiente `ivmhgizuofxdvvvzdxnl` (33 en total). **Correo todavía desactivado**: no se cargaron claves API de Brevo ni secretos del worker en Vault, ni se enviaron correos reales de feedback. La notificación in-app funciona sin este canal. Supabase Auth usa su configuración SMTP separada.
+Código preparado y migraciones 30–33 aplicadas en local y en el proyecto independiente `ivmhgizuofxdvvvzdxnl` (33 en total). **Correo todavía desactivado**: `BREVO_API_KEY` ya está en Vercel Preview y el secreto de worker se generó en Infisical con copias iniciales en Vercel/Vault. Faltan remitente, callback/protección y prueba real; no se enviaron correos de feedback. Ver la actualización de Infisical al final antes de crear o rotar claves. La notificación in-app funciona sin este canal. Supabase Auth usa su configuración SMTP separada.
 
 ## Diseño
 
