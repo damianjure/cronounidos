@@ -1,10 +1,16 @@
 # Preparación de servicios y entorno
 
-> Estado vigente 16/10/2026: Sprint 2 cerrado funcionalmente (`SPRINT-2-CLOSURE.md`). Veintiséis migraciones están aplicadas al proyecto independiente `ivmhgizuofxdvvvzdxnl`; la Preview protegida usa `SUPABASE_SECRET_KEY` solo en servidor para retirar archivos encolados. Sprint 3 cerrado funcionalmente (`SPRINT-3-CLOSURE.md`). La configuración Production, QA Auth/RLS remota integral y Sprints 4–5 siguen pendientes. Las entradas fechadas más abajo son historial de configuración.
+> Estado vigente 16/10/2026: Sprints 0–4 cerrados funcionalmente; Sprint 5 implementa feedback in-app y worker Brevo, pero sigue abierto por activación/prueba real de correo y gates de Production. **33 migraciones** aplicadas en local y en el Supabase independiente `ivmhgizuofxdvvvzdxnl`. Estado del canal y credenciales en `EMAIL.md`; las entradas posteriores son checkpoints históricos, no el estado vigente.
 
 ## Estado actual
 
-Los Sprints 0–3 están implementados funcionalmente (ver cierres de Sprints 2 y 3). El usuario confirmó y creó un proyecto Supabase **independiente**, `Crono Unidos` (`ivmhgizuofxdvvvzdxnl`, São Paulo), el 15/10/2026. Se aplicaron allí las veintiséis migraciones versionadas, **sin seed**. Se creó la organización real `Unidos para Servir` (`unidos`) y el primer administrador ya tiene Auth confirmada, perfil y membresía aprobados y grant global; el acceso a `/administracion` se verificó en Chrome. También existe el proyecto Vercel independiente `crono-unidos`, conectado solo a `damianjure/cronounidos`, con variables públicas de Supabase, `APP_URL` y `SUPABASE_SECRET_KEY` configuradas solo en Preview. SMTP está configurado temporalmente para Preview; faltan pruebas Auth remotas completas, configuración de Production y los sprints restantes. No está lista para público. No usar **caja-chica**, **docu-media-us** ni ningún proyecto ajeno.
+La Preview protegida de Vercel `crono-unidos` está conectada solo a `damianjure/cronounidos` y al Supabase independiente **Crono Unidos** (`ivmhgizuofxdvvvzdxnl`, São Paulo), sin seed remota. La organización `Unidos para Servir` (`unidos`) y el primer administrador están configurados. Variables y credenciales están limitadas a Preview; no se habilitó Production.
+
+SMTP de Auth usa temporalmente el remitente autorizado solo para Preview. La API key de Brevo está cargada en Vercel y el secreto independiente de worker se aprovisionó desde Infisical en Vercel/Vault; no hay sincronización automática. El callback de correo sigue ausente y el canal deshabilitado, sin envíos de feedback. Faltan remitente/callback/protección y recepción real, QA remota integral de Auth/RLS/invitaciones, dominio/redirects de Production y PWA en dispositivos físicos. No usar **caja-chica**, **docu-media-us** ni ningún proyecto ajeno.
+
+## Historial y procedimientos de configuración
+
+Los recuentos de migraciones, pruebas y pendientes en los checkpoints siguientes describen su fecha de ejecución; se conservan como evidencia histórica. Para el estado actual usar este encabezado, `ROADMAP.md`, `SPRINT-5.md` y `EMAIL.md`.
 
 ## 1. Entorno local
 

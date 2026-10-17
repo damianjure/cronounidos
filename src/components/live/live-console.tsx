@@ -60,7 +60,9 @@ export function LiveConsole({ initial }: { initial: LiveSnapshot }) {
     try {
       const result = await readLive(initial.meetingId);
       apply(result, started);
-      if (result.ok && mounted.current) setOnline(true);
+      // A successful read may arrive after the browser emitted `offline`.
+      // Keep the latest connectivity state instead of reviving stale controls.
+      if (result.ok && mounted.current) setOnline(navigator.onLine);
     } catch {
       if (mounted.current) {
         setOnline(false);

@@ -652,7 +652,33 @@ test('en vivo: dos dispositivos sincronizan, recuperan desconexión y cierran ex
   await expect.poll(()=>realtimeChanges,{timeout:20000}).toBeGreaterThan(0);
   await expect(second.getByRole('region',{name:'Actividad en curso'}).getByRole('heading',{name:'Primera en vivo',exact:true})).toBeVisible({timeout:10000});
   const stale=await client.rpc('transition_live',{p_meeting:meeting.meetingId,p_version:0,p_request:crypto.randomUUID(),p_command:'next'});expect(stale.error?.message).toContain('version conflict');
-  await page.context().setOffline(true);await expect(page.getByRole('status')).toContainText('Sin conexión');await expect(page.getByRole('button',{name:'Finalizar y avanzar',exact:true})).toBeDisabled();
+  // Hold a successful read until AFTER the offline event. A late response must
+  // not re-enable operation controls on a disconnected device.
+  let releaseRead!: () => void;
+  const heldRead = new Promise<void>(resolve => { releaseRead = resolve; });
+  let readReady!: () => void;
+  const ready = new Promise<void>(resolve => { readReady = resolve; });
+  let intercepted = false;
+  await page.route(`**/en-vivo/${meeting.meetingId}`, async route => {
+   if (route.request().method() !== 'POST' || intercepted) return route.continue();
+   intercepted = true;
+   const response = await route.fetch();
+   readReady();
+   await heldRead;
+   await route.fulfill({ response });
+  });
+  await page.getByRole('button',{name:'Sincronizar ahora',exact:true}).click();
+  await ready;
+  await page.context().setOffline(true);
+  await expect(page.getByRole('status')).toContainText('Sin conexión');
+  const delayedRead = page.waitForResponse(response => response.url().endsWith(`/en-vivo/${meeting.meetingId}`) && response.request().method() === 'POST');
+  releaseRead();
+  await (await delayedRead).finished();
+  // Let React consume the action response, rather than assert the pre-response state.
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(page.getByRole('button',{name:'Finalizar y avanzar',exact:true})).toBeDisabled();
+  await expect(page.getByRole('status')).toContainText('Sin conexión');
+  await page.unroute(`**/en-vivo/${meeting.meetingId}`);
   await second.getByRole('button',{name:'Finalizar y avanzar',exact:true}).click();await expect(second.getByRole('region',{name:'Actividad en curso'}).getByRole('heading',{name:'Segunda en vivo',exact:true})).toBeVisible();
   await page.context().setOffline(false);await expect(page.getByRole('region',{name:'Actividad en curso'}).getByRole('heading',{name:'Segunda en vivo',exact:true})).toBeVisible();
   expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect(await page.locator('body').innerText()).not.toContain('Texto privado');
