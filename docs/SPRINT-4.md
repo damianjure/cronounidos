@@ -55,3 +55,9 @@ Verificación posterior local: `npm run check` **212/212 pruebas, 15 suites**, l
 La ejecución **38994327354**, correspondiente al commit correctivo **`de99f2d`**, terminó **success** en ambos jobs (`foundation` y `authenticated-local`). La regresión controlada de respuesta tardía quedó aprobada en CI, no solamente local. El CI anterior fallido se conserva como antecedente; no se omitió el caso ni se agregó retry para ocultarlo.
 
 Preview del checkpoint documental posterior `7bbda3d`: **Ready**, deployment `dpl_A2v76Azm75qAthNgrUfWJaX5cfBt`, alias estable de rama. `POST /api/internal/feedback-email` sin autorización de aplicación devolvió **401 / unauthorized** usando acceso autorizado de Vercel CLI. No se reclamó correo ni se activó Production.
+
+### Ajuste del mecanismo de prueba de respuesta tardía
+
+El run documental posterior `38994503207` falló por timeout en móvil; el run siguiente `38994859141` pasó. La traza del fallido mostró la espera del evento HTTP después de `route.fulfill` con el contexto offline, antes de llegar a la aserción de controles: Chromium puede cancelar la solicitud pausada al cortar el transporte. No demuestra que reapareciera el bug de producción.
+
+Se separaron dos escenarios en la misma prueba: (1) mantener el transporte para entregar la lectura real retenida, simular únicamente `navigator.onLine=false` + evento offline y comprobar que esa respuesta no reactive controles; (2) cortar realmente el contexto con `setOffline(true)`, retirar la simulación y comprobar controles deshabilitados, avance desde el otro dispositivo, reconexión y cierre. La simulación existe solo en el test. No se retiró la desconexión real ni se agregó retry/timeout más amplio. Local: `npm run check` 212/212 y build/lint/tipos correctos; Chrome autenticado **18/18**. Logs `/tmp/crono-offline-deterministic-{check,e2e}.log`. El ajuste de prueba requiere CI nuevo.

@@ -669,7 +669,14 @@ test('en vivo: dos dispositivos sincronizan, recuperan desconexión y cierran ex
   });
   await page.getByRole('button',{name:'Sincronizar ahora',exact:true}).click();
   await ready;
-  await page.context().setOffline(true);
+  // Deliver the late action over a healthy transport while reproducing the
+  // browser's offline state/event. Chromium may cancel a paused network request
+  // on setOffline(), making a transport-held response nondeterministic in CI.
+  // The genuine network disconnect is exercised separately immediately below.
+  await page.evaluate(() => {
+   Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+   window.dispatchEvent(new Event('offline'));
+  });
   await expect(page.getByRole('status')).toContainText('Sin conexión');
   const delayedRead = page.waitForResponse(response => response.url().endsWith(`/en-vivo/${meeting.meetingId}`) && response.request().method() === 'POST');
   releaseRead();
@@ -679,6 +686,10 @@ test('en vivo: dos dispositivos sincronizan, recuperan desconexión y cierran ex
   await expect(page.getByRole('button',{name:'Finalizar y avanzar',exact:true})).toBeDisabled();
   await expect(page.getByRole('status')).toContainText('Sin conexión');
   await page.unroute(`**/en-vivo/${meeting.meetingId}`);
+  await page.context().setOffline(true);
+  await page.evaluate(() => Reflect.deleteProperty(navigator, 'onLine'));
+  await expect(page.getByRole('status')).toContainText('Sin conexión');
+  await expect(page.getByRole('button',{name:'Finalizar y avanzar',exact:true})).toBeDisabled();
   await second.getByRole('button',{name:'Finalizar y avanzar',exact:true}).click();await expect(second.getByRole('region',{name:'Actividad en curso'}).getByRole('heading',{name:'Segunda en vivo',exact:true})).toBeVisible();
   await page.context().setOffline(false);await expect(page.getByRole('region',{name:'Actividad en curso'}).getByRole('heading',{name:'Segunda en vivo',exact:true})).toBeVisible();
   expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect(await page.locator('body').innerText()).not.toContain('Texto privado');

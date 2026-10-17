@@ -2,7 +2,7 @@
 
 ## Estado al 16/10/2026
 
-Código preparado y migraciones 30–33 aplicadas en local y en el proyecto independiente `ivmhgizuofxdvvvzdxnl` (33 en total). **Correo todavía desactivado**: `BREVO_API_KEY` ya está en Vercel Preview y el secreto de worker se generó en Infisical con copias iniciales en Vercel/Vault. El remitente exclusivo `crono@damianjure.com` ya está verificado en Brevo y configurado en Vercel Preview, con `FEEDBACK_EMAIL_ENABLED=false` explícito. Callback creado, pero la prueba fue rechazada por Vercel: falta corregir el bypass de Vault (coincide con el secreto del worker), verificar acceso y hacer prueba real. No se enviaron correos de feedback. Ver la actualización de Infisical al final antes de crear o rotar claves. La notificación in-app funciona sin este canal. Supabase Auth usa su configuración SMTP separada.
+Código preparado y migraciones 30–33 aplicadas en local y en el proyecto independiente `ivmhgizuofxdvvvzdxnl` (33 en total). **Correo todavía desactivado**: `BREVO_API_KEY` ya está en Vercel Preview y el secreto de worker se generó en Infisical con copias iniciales en Vercel/Vault. El remitente exclusivo `crono@damianjure.com` ya está verificado en Brevo y configurado en Vercel Preview, con `FEEDBACK_EMAIL_ENABLED=false` explícito. Callback y acceso protegido verificados después de corregir el bypass de Vault: la segunda prueba llegó al worker y obtuvo el 503 esperado con canal desactivado. Falta habilitación controlada y prueba real. No se enviaron correos de feedback. Ver la actualización de Infisical al final antes de crear o rotar claves. La notificación in-app funciona sin este canal. Supabase Auth usa su configuración SMTP separada.
 
 ## Diseño
 
@@ -106,3 +106,16 @@ Con outbox remoto vacío y canal todavía desactivado se hizo **una prueba HTTP 
 Comprobaciones internas booleanas: valor sin CR/LF ni espacios de borde y longitud válida; **bypass igual al secreto de worker**. Se pidió al propietario corregir solo `crono_unidos_feedback_vercel_bypass` con la credencial dedicada de Vercel, distinta de `crono_unidos_feedback_worker_secret`. No se mostraron hashes/valores, no se rotó el worker y no se revocó el bypass anterior de Vercel. Repetir la prueba tras la corrección: el resultado esperado con canal desactivado es **503 / email_not_configured** de la app, no un 401 de Vercel.
 
 La URL ya existe; los jobs automáticos no hacen HTTP mientras la cola siga vacía. No habilitar el canal hasta resolver el acceso, revisar destinatario y realizar prueba controlada. Si se agregan reuniones entretanto, no confundir el error de protección con un fallo de Brevo.
+
+
+## Bypass corregido y acceso al worker verificado — 16/10/2026
+
+El propietario corrigió el bypass de Vault. La comparación interna confirmó que **ya es distinto del secreto de worker**, sin recuperar ni mostrar valores. Se repitió una única prueba explícita de pg_net con outbox vacío (request ID **2**, metadata en dispatches). Resultado: **HTTP 503**, sin timeout, cuerpo exacto `{"error":"email_not_configured"}`. Esto prueba que se superó Deployment Protection y la autenticación independiente del worker, y que el guard de canal desactivado está funcionando. No es un fallo de Brevo ni evidencia de envío; no se llamó al proveedor.
+
+Callback, secreto de worker y bypass están configurados en Vault del proyecto independiente. El remitente exclusivo está configurado/verificado; `FEEDBACK_EMAIL_ENABLED=false` sigue vigente en Preview. No se cambiaron Production, SMTP de Auth ni las credenciales del worker. Se consultó al propietario para una prueba controlada con reunión técnica claramente identificada, un solo destinatario y espera real de +10 min; todavía no se creó esa reunión ni se activó el canal.
+
+### Prueba real autorizada: borrador preparado
+
+El propietario autorizó la reunión técnica identificada, un único aviso a su cuenta y espera de diez minutos reales, conservando historial. Se creó por UI **un solo borrador** «Prueba técnica de correo», con una actividad de un minuto «Prueba técnica de correo — sin convocatoria», sin personas, equipos, notas ni recursos. Se comprobó existencia en DB para no repetir el alta ante una navegación demorada. El cambio de duración se guardó automáticamente como borrador.
+
+La confirmación `window.confirm` de publicación bloqueó las llamadas CDP del navegador; una pestaña nueva recuperó el mismo borrador, sin crear otro. La comprobación posterior sigue mostrando `draft / published=false`: **no está publicada, iniciada ni cerrada**. Se pidió al propietario pulsar Publicar cambios y aceptar desde la UI. No se eludió el guard mediante SQL privilegiado. Canal de correo todavía desactivado, sin entrega ni solicitudes nuevas de esta reunión. Tras publicación: iniciar/cerrar por operador, verificar exactamente un participante/destinatario autorizado, habilitar Preview y esperar el scheduler real sin modificar timestamps.
