@@ -6,7 +6,7 @@
 
 La Preview protegida de Vercel `crono-unidos` está conectada solo a `damianjure/cronounidos` y al Supabase independiente **Crono Unidos** (`ivmhgizuofxdvvvzdxnl`, São Paulo), sin seed remota. La organización `Unidos para Servir` (`unidos`) y el primer administrador están configurados. Variables y credenciales están limitadas a Preview; no se habilitó Production.
 
-SMTP de Auth usa temporalmente el remitente autorizado solo para Preview. La API key de Brevo está cargada en Vercel y el secreto independiente de worker se aprovisionó desde Infisical en Vercel/Vault; no hay sincronización automática. El callback de correo sigue ausente y el canal deshabilitado, sin envíos de feedback. Faltan remitente/callback/protección y recepción real, QA remota integral de Auth/RLS/invitaciones, dominio/redirects de Production y PWA en dispositivos físicos. No usar **caja-chica**, **docu-media-us** ni ningún proyecto ajeno.
+SMTP de Auth usa temporalmente el remitente autorizado solo para Preview. La API key de Brevo está cargada en Vercel y el secreto independiente de worker se aprovisionó desde Infisical en Vercel/Vault; no hay sincronización automática. El callback de correo sigue ausente y el canal deshabilitado, sin envíos de feedback. El remitente exclusivo de feedback `crono@damianjure.com` quedó verificado en Brevo; faltan callback/protección y recepción real, QA remota integral de Auth/RLS/invitaciones, dominio/redirects de Production y PWA en dispositivos físicos. No usar **caja-chica**, **docu-media-us** ni ningún proyecto ajeno.
 
 ## Historial y procedimientos de configuración
 

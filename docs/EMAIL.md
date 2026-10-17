@@ -2,7 +2,7 @@
 
 ## Estado al 16/10/2026
 
-Código preparado y migraciones 30–33 aplicadas en local y en el proyecto independiente `ivmhgizuofxdvvvzdxnl` (33 en total). **Correo todavía desactivado**: `BREVO_API_KEY` ya está en Vercel Preview y el secreto de worker se generó en Infisical con copias iniciales en Vercel/Vault. Faltan remitente, callback/protección y prueba real; no se enviaron correos de feedback. Ver la actualización de Infisical al final antes de crear o rotar claves. La notificación in-app funciona sin este canal. Supabase Auth usa su configuración SMTP separada.
+Código preparado y migraciones 30–33 aplicadas en local y en el proyecto independiente `ivmhgizuofxdvvvzdxnl` (33 en total). **Correo todavía desactivado**: `BREVO_API_KEY` ya está en Vercel Preview y el secreto de worker se generó en Infisical con copias iniciales en Vercel/Vault. El remitente exclusivo `crono@damianjure.com` ya está verificado en Brevo y configurado en Vercel Preview, con `FEEDBACK_EMAIL_ENABLED=false` explícito. Faltan callback/protección y prueba real; no se enviaron correos de feedback. Ver la actualización de Infisical al final antes de crear o rotar claves. La notificación in-app funciona sin este canal. Supabase Auth usa su configuración SMTP separada.
 
 ## Diseño
 
@@ -85,3 +85,14 @@ La misma credencial se aprovisionó inicialmente en **Vercel `crono-unidos`, Pre
 `BREVO_API_KEY` fue creada previamente por el propietario y está presente en Vercel Preview con el nombre exacto. Se dejó intacta; no se leyó ni se copió a Infisical. Centralizar también esa API key requiere ingreso directo del propietario en Infisical o una integración autorizada; nunca inventar un valor aleatorio como reemplazo de una credencial emitida por Brevo.
 
 La URL `crono_unidos_feedback_worker_url` sigue ausente; `private.kick_feedback_email_worker()` retorna NULL sin HTTP. No se activó `FEEDBACK_EMAIL_ENABLED`, no se eligió un remitente no verificado y no se enviaron correos. Restan remitente, callback/protección de Preview, activación controlada y prueba de recepción real. Las variables nuevas entran en vigor en el siguiente despliegue de Preview; no se modificó Production.
+
+
+## Remitente exclusivo verificado y canal explícitamente desactivado — 16/10/2026
+
+Se creó en Brevo **Crono Unidos <crono@damianjure.com>**, usando el dominio ya autenticado. La lista de remitentes confirmó **Verificado**, firma DKIM `damianjure.com` y DMARC configurado. El remitente anterior se dejó intacto. Esto verifica identidad de envío en Brevo, **no demuestra que exista una bandeja o alias que reciba respuestas en `crono@damianjure.com`**; confirmar ese destino antes del lanzamiento. No se modificaron DNS ni SMTP de Supabase Auth: este último todavía usa la identidad temporal de Preview.
+
+En Vercel se agregaron `FEEDBACK_FROM_EMAIL=crono@damianjure.com` y `FEEDBACK_EMAIL_ENABLED=false`, solo Preview / rama `codex/sprint-2-editor`; existencia/scope comprobados por CLI, sin leer credenciales. Requieren un despliegue posterior para entrar en vigor. Production permanece intacta.
+
+La consulta remota mostró outbox vacío, ambos jobs registrados/activos y ausencia de callback/bypass en Vault. La Preview mantiene Vercel Authentication. Se abrió el formulario **Add Bypass** y se pidió al propietario crear una credencial dedicada con nota `crono-unidos-feedback-preview`, guardándola directamente en Vault como `crono_unidos_feedback_vercel_bypass`, sin compartirla por chat ni revelar/modificar el bypass existente. No se creó esa credencial ni se amplió acceso automáticamente. El callback seguirá sin configurarse hasta verificar la protección; no activar el canal por el solo hecho de tener remitente.
+
+Verificación remota de interfaz con sesión administrativa existente: `/feedback` mostró el estado vacío de solicitudes y `/feedback/admin` abrió el panel sin reuniones cerradas. Fue lectura, sin fixtures ni respuestas inventadas; no sustituye el recorrido con solicitudes reales ni la QA de roles distintos.

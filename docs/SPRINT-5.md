@@ -69,3 +69,10 @@ Ambas migraciones se probaron primero localmente y después se aplicaron al remo
 - Comprobaciones remotas: anon/authenticated no leen Vault; authenticated no reclama mail, `service_role` sí; anon no hace ack. Job email activo cada minuto, pero sin secretos retorna NULL y **no hace HTTP**. PostgREST rechazó `net` con 406/PGRST106 antes/después de habilitar la extensión. GraphQL remoto no está habilitado; en local la introspección no incluyó tipos de red. Advisor de seguridad sin ERROR, con avisos intencionales ya documentados y Leaked Password Protection aún pendiente.
 
 Las credenciales avanzaron después de este checkpoint: API key real cargada por el propietario en Vercel y secreto del worker gestionado con Infisical/copiado a Vercel y Vault. Falta verificar remitente, conectar el callback protegido y probar recepción real. Configuración/seguridad/diagnóstico en **`EMAIL.md`**. Se consultó al propietario cómo abrir las claves API de Brevo, expresamente sin pegarlas en el chat. Sprint 5 permanece abierto por estos gates y Production.
+
+
+## Avance de configuración Preview — 16/10/2026
+
+Remitente exclusivo de feedback creado/verificado en Brevo: `crono@damianjure.com`, nombre Crono Unidos, dominio autenticado y DMARC configurado. Agregadas variables Preview de esa identidad y `FEEDBACK_EMAIL_ENABLED=false` explícito, sin habilitar envíos. Falta confirmar bandeja/alias de respuestas; SMTP de Auth no cambió. Vault aún sin callback/bypass; se pidió al propietario completar la credencial dedicada de automatización, sin revelarla por chat. Outbox remoto vacío, jobs activos. Ver `EMAIL.md` para alcance exacto y pasos seguros.
+
+Chrome remoto con sesión administrativa: `/feedback` y `/feedback/admin` abrieron estados vacíos esperados, sin escrituras ni fixtures. No prueba entrega de feedback ni aislamiento con otras sesiones remotas. Production continúa pendiente.
