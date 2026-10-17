@@ -73,3 +73,15 @@ order by d.created_at desc limit 10;
 No seleccionar `vault.decrypted_secrets`, headers ni cuerpos de colas HTTP para pegarlos en el chat. El historial de dispatch conserva solo IDs/fechas por siete días; los intentos de correo conservan su auditoría. La respuesta de pg_net es temporal: consultar metadata a tiempo. Un cron `succeeded` con `1 row` no prueba que el canal esté configurado: sin secretos el resultado puede ser NULL.
 
 Estados `review`/`failed` requieren diagnóstico y decisión explícita del operador, no un reset indiscriminado. No hay todavía panel de reenvío manual ni webhook de entrega/bounce; no confundir aceptación de Brevo con entrega física.
+
+## Actualización: Infisical como gestor del secreto de worker — 16/10/2026
+
+Por pedido explícito del propietario se generó `FEEDBACK_WORKER_SECRET` con `crypto.randomBytes(32)` (64 caracteres hex, sin reutilizar claves existentes). Fuente: **Infisical → Desarrollo IA → Development (`dev`) → `/crono-unidos/preview`**, versión inicial 1. No se modificó ni eliminó `CODEX_TEST`.
+
+La misma credencial se aprovisionó inicialmente en **Vercel `crono-unidos`, Preview, rama `codex/sprint-2-editor`, Sensitive/Secret**, por stdin sin pasar el valor en argumentos de CLI, y en el **Vault de `ivmhgizuofxdvvvzdxnl`** como `crono_unidos_feedback_worker_secret`. Se verificaron existencia, scope y metadata sin recuperar claves guardadas. El archivo temporal de transferencia tuvo permisos 0600/directorio 0700 y fue eliminado tras confirmar las escrituras. Ningún valor se guardó en Git/documentación ni se mostró en la respuesta.
+
+**Esto es aprovisionamiento inicial, no una integración de sincronización automática de Infisical.** El MCP actual devuelve valores enmascarados al leerlos; no afirmar que puede recuperar/repropagar una clave almacenada. Una futura rotación deberá coordinar Infisical, Vercel/redeploy y Vault, pausando el job si ya está activo, o configurar una integración nativa autorizada. No cambiar solo una copia.
+
+`BREVO_API_KEY` fue creada previamente por el propietario y está presente en Vercel Preview con el nombre exacto. Se dejó intacta; no se leyó ni se copió a Infisical. Centralizar también esa API key requiere ingreso directo del propietario en Infisical o una integración autorizada; nunca inventar un valor aleatorio como reemplazo de una credencial emitida por Brevo.
+
+La URL `crono_unidos_feedback_worker_url` sigue ausente; `private.kick_feedback_email_worker()` retorna NULL sin HTTP. No se activó `FEEDBACK_EMAIL_ENABLED`, no se eligió un remitente no verificado y no se enviaron correos. Restan remitente, callback/protección de Preview, activación controlada y prueba de recepción real. Las variables nuevas entran en vigor en el siguiente despliegue de Preview; no se modificó Production.
