@@ -65,3 +65,13 @@ Diseño inicial; Codex debe escribir migraciones SQL versionadas y pruebas RLS. 
 ### Outbox de correo (Sprint 5)
 
 `private.feedback_email_outbox` mantiene una fila por solicitud, payload mínimo congelado, estado/lease/ventana de reintentos y resultado de proveedor. `private.feedback_email_attempts` audita cada intento y ack por lease. `private.feedback_email_dispatches` conserva IDs/fechas de llamadas HTTP del scheduler, no headers ni comentarios. RLS activo y sin grants de tabla para clientes. Los RPCs `claim_feedback_emails` / `finish_feedback_email` son exclusivamente de máquina `service_role`, no de administradores con sesión de usuario. La identidad de email viene de Auth confirmado y aprobación vigente; no de metadata editable. Ver `EMAIL.md` antes de activar el canal.
+
+## Contrato SECURITY DEFINER — 17/10/2026
+
+`tests/integration/security-definer.test.ts` (corre con `npm test` / `npm run test:rls`) audita en PGlite, tras aplicar todas las migraciones, cada función `SECURITY DEFINER` del schema `public`:
+
+1. `search_path` fijado vacío (`set search_path=''`).
+2. Sin `EXECUTE` para `anon`, salvo `public_agenda`.
+3. Si `anon` o `authenticated` pueden ejecutarla, su cuerpo llama a un helper `private.*(...)` o a `auth.uid()`. Excepción documentada: `public_agenda` (proyección pública mínima). Las funciones solo para `service_role` (worker de correo) no requieren guarda de usuario.
+
+Una función nueva que no cumpla rompe la CI. Para agregar una excepción, justificarla en el test y en este archivo. El test verifica la **presencia** de una guarda, no su corrección: la lógica de cada RPC sigue cubierta por sus pruebas RLS específicas.

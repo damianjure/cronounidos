@@ -27,3 +27,39 @@ export function safeRedirect(path: string | null) {
     ? path
     : "/inicio";
 }
+// Admin form inputs, validated before reaching the database (17/10/2026).
+// FormData returns null for missing fields; "" means "no team/person".
+const optionalUuid = z.preprocess(
+  (v) => (v === "" || v === null ? null : v),
+  z.uuid().nullable(),
+);
+export const permissionActions = [
+  "administer",
+  "plan",
+  "assign",
+  "edit_roles",
+  "confirm",
+  "read_agenda",
+  "read_people",
+  "read_content",
+  "operate_live",
+] as const;
+export const approveMemberInput = z.object({
+  orgId: z.uuid(),
+  userId: z.uuid(),
+  role: z.enum(["admin", "planner", "leader", "member"]),
+  teamId: optionalUuid,
+});
+export const linkPersonInput = z.object({
+  orgId: z.uuid(),
+  userId: z.uuid(),
+  personId: optionalUuid,
+});
+export const memberInput = z.object({ orgId: z.uuid(), userId: z.uuid() });
+export const grantInput = z.object({
+  orgId: z.uuid(),
+  userId: z.uuid(),
+  teamId: optionalUuid,
+  permission: z.enum(permissionActions),
+});
+export const revokeInput = z.object({ orgId: z.uuid(), grantId: z.uuid() });

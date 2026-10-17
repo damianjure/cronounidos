@@ -2,17 +2,29 @@
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { adminClient } from "@/lib/supabase/admin";
-import { adminInput } from "@/lib/auth-validation";
+import {
+  adminInput,
+  approveMemberInput,
+  grantInput,
+  linkPersonInput,
+  memberInput,
+  revokeInput,
+} from "@/lib/auth-validation";
 export async function approveMember(form: FormData) {
-  const org = String(form.get("orgId"));
-  const c = await requireAdmin(org);
-  const user = String(form.get("userId"));
-  const role = String(form.get("role"));
+  const parsed = approveMemberInput.safeParse({
+    orgId: form.get("orgId"),
+    userId: form.get("userId"),
+    role: form.get("role"),
+    teamId: form.get("teamId"),
+  });
+  if (!parsed.success) redirect("/administracion?error=datos");
+  const p = parsed.data;
+  const c = await requireAdmin(p.orgId);
   const { error } = await c.rpc("approve_member", {
-    p_org: org,
-    p_user: user,
-    p_role: role,
-    p_team: form.get("teamId") || null,
+    p_org: p.orgId,
+    p_user: p.userId,
+    p_role: p.role,
+    p_team: p.teamId,
   });
   if (error) redirect("/administracion?error=aprobacion");
   redirect("/administracion?ok=aprobado");
@@ -54,60 +66,88 @@ export async function provisionUser(form: FormData) {
     p_user: result.data.user.id,
   });
   if (error) {
-    /* Never leave an untracked privileged membership; the newly created user has no access. */ redirect(
-      "/administracion?error=membresia",
+    // Do not leave an orphan Auth account: delete the user just created so the
+    // admin can retry with the same email. If cleanup also fails, say so.
+    const { error: cleanupError } = await admin.auth.admin.deleteUser(
+      result.data.user.id,
+    );
+    redirect(
+      `/administracion?error=${cleanupError ? "membresia-huerfana" : "membresia"}`,
     );
   }
   redirect("/administracion?ok=alta");
 }
 
 export async function linkPerson(form: FormData) {
-  const org = String(form.get("orgId"));
-  const c = await requireAdmin(org);
+  const parsed = linkPersonInput.safeParse({
+    orgId: form.get("orgId"),
+    userId: form.get("userId"),
+    personId: form.get("personId"),
+  });
+  if (!parsed.success) redirect("/administracion?error=datos");
+  const p = parsed.data;
+  const c = await requireAdmin(p.orgId);
   const { error } = await c.rpc("link_member_person", {
-    p_org: org,
-    p_user: String(form.get("userId")),
-    p_person: form.get("personId") || null,
+    p_org: p.orgId,
+    p_user: p.userId,
+    p_person: p.personId,
   });
   if (error) redirect("/administracion?error=persona");
   redirect("/administracion?ok=persona");
 }
 export async function suspendMember(form: FormData) {
-  const org = String(form.get("orgId"));
-  const c = await requireAdmin(org);
+  const parsed = memberInput.safeParse({
+    orgId: form.get("orgId"),
+    userId: form.get("userId"),
+  });
+  if (!parsed.success) redirect("/administracion?error=datos");
+  const p = parsed.data;
+  const c = await requireAdmin(p.orgId);
   const { error } = await c.rpc("set_member_status", {
-    p_org: org,
-    p_user: String(form.get("userId")),
+    p_org: p.orgId,
+    p_user: p.userId,
     p_status: "suspended",
   });
   if (error) redirect("/administracion?error=suspension");
   redirect("/administracion?ok=suspendido");
 }
 export async function grantPermission(form: FormData) {
-  const org = String(form.get("orgId"));
-  const c = await requireAdmin(org);
+  const parsed = grantInput.safeParse({
+    orgId: form.get("orgId"),
+    userId: form.get("userId"),
+    teamId: form.get("teamId"),
+    permission: form.get("permission"),
+  });
+  if (!parsed.success) redirect("/administracion?error=datos");
+  const p = parsed.data;
+  const c = await requireAdmin(p.orgId);
   const {
     data: { user },
   } = await c.auth.getUser();
   if (!user) throw new Error("Sesión vencida");
   const { error } = await c.from("permission_grants").insert({
-    org_id: org,
-    subject_user_id: String(form.get("userId")),
-    team_id: form.get("teamId") || null,
-    permission: String(form.get("permission")),
+    org_id: p.orgId,
+    subject_user_id: p.userId,
+    team_id: p.teamId,
+    permission: p.permission,
     granted_by: user.id,
   });
   if (error) redirect("/administracion?error=permiso");
   redirect("/administracion?ok=permiso");
 }
 export async function revokePermission(form: FormData) {
-  const org = String(form.get("orgId"));
-  const c = await requireAdmin(org);
+  const parsed = revokeInput.safeParse({
+    orgId: form.get("orgId"),
+    grantId: form.get("grantId"),
+  });
+  if (!parsed.success) redirect("/administracion?error=datos");
+  const p = parsed.data;
+  const c = await requireAdmin(p.orgId);
   const { error } = await c
     .from("permission_grants")
     .delete()
-    .eq("id", String(form.get("grantId")))
-    .eq("org_id", org);
+    .eq("id", p.grantId)
+    .eq("org_id", p.orgId);
   if (error) redirect("/administracion?error=revocar");
   redirect("/administracion?ok=revocado");
 }
