@@ -807,67 +807,6 @@ export function MeetingEditor({
                   />
                 </label>
               </fieldset>
-              <details
-                className="editor-choices advanced-fields"
-                data-detail-section="advanced"
-              >
-                <summary>Opciones avanzadas</summary>
-                <CustomFields
-                  schema={active.fieldSchema}
-                  values={active.customFields}
-                  disabled={busy}
-                  onSchema={(fieldSchema) => edit({ fieldSchema })}
-                  onValues={(customFields) => edit({ customFields })}
-                />
-                {currentType &&
-                  JSON.stringify(currentType.fieldSchema) !==
-                    JSON.stringify(active.fieldSchema) && (
-                    <div className="notice">
-                      <p>
-                        Hay una versión nueva de este tipo. Esta instancia
-                        conserva su definición hasta que decidas actualizarla.
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={busy}
-                        onClick={() => {
-                          if (
-                            !window.confirm(
-                              "¿Aplicar la definición actual solo a esta actividad? Los valores incompatibles se quitarán del borrador. La agenda publicada no cambia hasta publicar.",
-                            )
-                          )
-                            return;
-                          const compatible = Object.fromEntries(
-                            Object.entries(active.customFields).filter(
-                              ([key, value]) => {
-                                const field = currentType.fieldSchema.find(
-                                  (item) => item.key === key,
-                                );
-                                if (!field) return false;
-                                let invalid = false;
-                                validateFields(
-                                  [field],
-                                  { [key]: value },
-                                  () => {
-                                    invalid = true;
-                                  },
-                                );
-                                return !invalid;
-                              },
-                            ),
-                          );
-                          edit({
-                            fieldSchema: currentType.fieldSchema,
-                            customFields: compatible,
-                          });
-                        }}
-                      >
-                        Aplicar definición a esta actividad
-                      </Button>
-                    </div>
-                  )}
-              </details>
               <details className="editor-choices" data-detail-section="team">
                 <summary>Responsables ({active.responsibles.length})</summary>
                 {active.responsibles.map((r, index) => (
@@ -1225,6 +1164,67 @@ export function MeetingEditor({
                 <p className="muted">
                   Las paralelas no desplazan el cronograma principal.
                 </p>
+              </details>
+              <details
+                className="editor-choices advanced-fields"
+                data-detail-section="advanced"
+              >
+                <summary>Opciones avanzadas</summary>
+                <CustomFields
+                  schema={active.fieldSchema}
+                  values={active.customFields}
+                  disabled={busy}
+                  onSchema={(fieldSchema) => edit({ fieldSchema })}
+                  onValues={(customFields) => edit({ customFields })}
+                />
+                {currentType &&
+                  JSON.stringify(currentType.fieldSchema) !==
+                    JSON.stringify(active.fieldSchema) && (
+                    <div className="notice">
+                      <p>
+                        Hay una versión nueva de este tipo. Esta instancia
+                        conserva su definición hasta que decidas actualizarla.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => {
+                          if (
+                            !window.confirm(
+                              "¿Aplicar la definición actual solo a esta actividad? Los valores incompatibles se quitarán del borrador. La agenda publicada no cambia hasta publicar.",
+                            )
+                          )
+                            return;
+                          const compatible = Object.fromEntries(
+                            Object.entries(active.customFields).filter(
+                              ([key, value]) => {
+                                const field = currentType.fieldSchema.find(
+                                  (item) => item.key === key,
+                                );
+                                if (!field) return false;
+                                let invalid = false;
+                                validateFields(
+                                  [field],
+                                  { [key]: value },
+                                  () => {
+                                    invalid = true;
+                                  },
+                                );
+                                return !invalid;
+                              },
+                            ),
+                          );
+                          edit({
+                            fieldSchema: currentType.fieldSchema,
+                            customFields: compatible,
+                          });
+                        }}
+                      >
+                        Aplicar definición a esta actividad
+                      </Button>
+                    </div>
+                  )}
               </details>
             </>
           ) : (

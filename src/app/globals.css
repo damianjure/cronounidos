@@ -1156,17 +1156,51 @@ h1 {
     justify-content: center;
   }
   .shell:not([data-preview="mobile"]) .editor-block {
-    grid-template-columns: 36px 52px minmax(0, 1fr) 80px;
-    gap: 6px;
+    grid-template-columns: 44px 52px minmax(0, 1fr) 88px;
+    gap: 8px;
     padding: 10px;
   }
   .shell:not([data-preview="mobile"]) .editor-block .duration-field {
     grid-column: 4;
-    flex-direction: column;
-    gap: 0;
+    flex-direction: row;
+    gap: 4px;
+    margin: 0;
+    white-space: nowrap;
   }
   .shell:not([data-preview="mobile"]) .editor-block .duration-field input {
-    width: 70px;
+    width: 60px;
+    min-width: 0;
+    flex: 0 0 60px;
+    text-align: center;
+    padding: 6px 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Compact visible frames, while preserving 44px pointer/touch targets. */
+  .shell:not([data-preview="mobile"]) .editor-block .icon-button {
+    position: relative;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    flex: 0 0 44px;
+    border: 0;
+    background: transparent;
+  }
+  .shell:not([data-preview="mobile"]) .editor-block .icon-button::before {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--panel);
+    pointer-events: none;
+  }
+  .shell:not([data-preview="mobile"]) .editor-block .icon-button svg {
+    position: relative;
+  }
+  .shell:not([data-preview="mobile"]) .editor-block .planned-time {
+    white-space: nowrap;
   }
   .shell:not([data-preview="mobile"]) .editor-block .move-actions {
     grid-column: 1/-1;
@@ -1200,6 +1234,6 @@ h1 {
   font-size: 12px;
 }
 @media (min-width: 1450px) {
-  .shell:not([data-preview="mobile"]) .editor-block { grid-template-columns: 36px 52px minmax(0, 1fr) 76px 92px; margin-bottom: 8px; }
+  .shell:not([data-preview="mobile"]) .editor-block { grid-template-columns: 44px 52px minmax(0, 1fr) 88px 92px; margin-bottom: 8px; }
   .shell:not([data-preview="mobile"]) .editor-block .move-actions { grid-column: 5; grid-row: 1; }
 }

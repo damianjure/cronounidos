@@ -76,3 +76,10 @@ Cuatro commits hasta `34aa19a` pusheados a `codex/sprint-2-editor`. Preview **Re
 Carga terminada en Preview: **3 reuniones nuevas en borrador (12/8/4 bloques; 120/75/45 min)**, **20 personas del directorio**, **6 equipos**, **20 roles funcionales**, 12 tipos de bloque y 3 tipos de reunión. Incluye 3 tareas paralelas, 14 puestos y 51 asignaciones pendientes. No son cuentas ni roles de acceso. Las dos reuniones previas se conservaron; Auth/perfiles/membresías/grants y outbox sin cambios. Sin publicación, invitaciones, envío de correos ni activación de Production.
 
 [Manifiesto, método y verificación](DATOS-DEMO.md). Alta de los tres borradores por UI autenticada; población ficticia administrativa mediante una transacción acotada al proyecto/organización/IDs, probada antes en PGlite. No equivale a probar altas/asignaciones mediante la UI ni permisos multirol. Chrome confirmó los tres editores, horarios, responsables y directorio. Los gates de Production no cambian.
+
+
+## Alineación puntual del editor — 17/10/2026
+
+A pedido del propietario, solo dos ajustes: controles de minutos/flechas más compactos y sin superposición, y «Opciones avanzadas» como última sección del detalle (incluido después de las paralelas). Causa reproducida: handle de mínimo 44 px dentro de una columna de 36 px invadía el horario. Columna corregida a 44 px, separación explícita, marco visual de flechas/handle de 34 px conservando área interactiva de 44 px; minutos de 60 px con unidad alineada. Sin cambios de datos, permisos ni lógica de persistencia.
+
+Verificación local: lint/typecheck/build y 245 tests aprobados; E2E base Chrome **39 aprobadas** (9 combinaciones móviles de specs desktop no aplican; regresiones móviles existentes aprobadas). Regresión nueva reproduce el solapamiento original y verifica separación a 1100/1280/1450/1600 px, título largo, última sección y enlace «Ir a avanzado». Capturas claro/oscuro revisadas. Suite autenticada y entrega Preview: en verificación; Production sin cambios.

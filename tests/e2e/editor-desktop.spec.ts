@@ -262,3 +262,48 @@ test("desktop ancho: filas compactas y detalle legible en ambos temas", async ({
     });
   }
 });
+
+test("controles no se superponen y opciones avanzadas es la última sección", async ({
+  page,
+}) => {
+  await page.getByLabel("Nombre de la actividad", { exact: true }).fill(
+    "Prueba de sonido y repaso musical con todos los equipos de la celebración",
+  );
+  for (const width of [1100, 1280, 1450, 1600]) {
+    await page.setViewportSize({ width, height: 1000 });
+    const row = page.locator(".editor-timeline > li").first();
+    const boxes = await row
+      .locator(
+        ":scope > button, :scope > .planned-time, :scope > .duration-field, :scope > .move-actions",
+      )
+      .evaluateAll((elements) =>
+        elements.map((e) => {
+          const r = e.getBoundingClientRect();
+          return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+        }),
+      );
+    for (let i = 0; i < boxes.length; i++)
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i],
+          b = boxes[j];
+        expect(
+          a.right <= b.left ||
+            b.right <= a.left ||
+            a.bottom <= b.top ||
+            b.bottom <= a.top,
+        ).toBe(true);
+      }
+    await expect(row.locator(".drag-handle")).toHaveCSS("min-width", "44px");
+    expect(
+      (await row.locator(".duration-field input").boundingBox())!.width,
+    ).toBeLessThanOrEqual(64);
+  }
+  const sections = page.locator(".block-detail > details");
+  await expect(sections.last().locator(":scope > summary")).toHaveText(
+    "Opciones avanzadas",
+  );
+  await page
+    .getByRole("button", { name: "Ir a avanzado", exact: true })
+    .click();
+  await expect(sections.last()).toHaveAttribute("open", "");
+});
